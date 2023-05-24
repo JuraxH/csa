@@ -187,15 +187,15 @@ namespace CA {
         public:
 
 
-        CA() : counters_({Counter{0,0},}), states_() {}
+        CA() : counters_(), states_() {}
 
         State& get_state(StateId id) { assert(id < states_.size()); return states_[id]; }
         StateId add_state() { states_.push_back(State()); return states_.size() - 1; }
         size_t state_count() { return states_.size(); }
 
-        Counter& get_counter(CounterId id) { assert(id < counters_.size()); return counters_[id]; }
-        CounterId add_counter(Counter &&cnt) { counters_.push_back(cnt); return counters_.size() - 1; }
-        size_t counter_count() { return counters_.size() - 1; }
+        Counter& get_counter(CounterId id) { assert(id - 1 < counters_.size()); return counters_[id-1]; }
+        CounterId add_counter(Counter &&cnt) { counters_.push_back(cnt); return counters_.size(); }
+        size_t counter_count() { return counters_.size(); }
 
         string to_string() {
             string str{};
