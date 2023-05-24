@@ -777,4 +777,9 @@ CharClass* CharClassBuilder::GetCharClass() {
   return cc;
 }
 
+// convenience function for CA construction
+re2::Regexp *Regexp::EmptyMatch(ParseFlags flags) {
+    return new Regexp(kRegexpEmptyMatch, flags);
+}
+
 }  // namespace re2

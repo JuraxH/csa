@@ -378,6 +378,9 @@ class Regexp {
   // Like Alternate but does not factor out common prefixes.
   static Regexp* AlternateNoFactor(Regexp** subs, int nsubs, ParseFlags flags);
 
+  // convenience functions used by CA construction
+  static Regexp* EmptyMatch(ParseFlags flags);
+
   // Helper traversal class, defined fully in walker-inl.h.
   template<typename T> class Walker;
 
