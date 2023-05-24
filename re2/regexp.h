@@ -325,6 +325,9 @@ class Regexp {
       return submany_;
   }
 
+  // temporary helper function for construction of CA
+  void null_loop() { DCHECK_EQ(op_, kRegexpRepeat); min_ = 0; }
+
   int min() { DCHECK_EQ(op_, kRegexpRepeat); return min_; }
   int max() { DCHECK_EQ(op_, kRegexpRepeat); return max_; }
   Rune rune() { DCHECK_EQ(op_, kRegexpLiteral); return rune_; }
