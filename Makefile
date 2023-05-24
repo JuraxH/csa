@@ -8,7 +8,8 @@ RE2_OBJ = re2/compile.o re2/parse.o re2/perl_groups.o re2/prog.o re2/re2.o re2/r
 
 
 
-CXXFLAGS=-std=c++14 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g -O3 -DNDEBUG
+CXXFLAGS=-std=c++20 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g 
+#-O3 -DNDEBUG
 
 CXX=g++
 
