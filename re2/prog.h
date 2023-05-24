@@ -169,6 +169,9 @@ class Prog {
   void set_anchor_end(bool b) { anchor_end_ = b; }
   int bytemap_range() { return bytemap_range_; }
 
+  // For CA construction
+  uint8_t *bytemap() { return bytemap_; }
+
   // Configures prefix accel using the analysis performed during compilation.
   void ConfigurePrefixAccel(const std::string& prefix, bool prefix_foldcase);
 
