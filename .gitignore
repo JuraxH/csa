@@ -30,4 +30,5 @@
 *.exe
 *.out
 *.app
-main
+# build directory
+build
