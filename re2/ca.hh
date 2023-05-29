@@ -45,7 +45,7 @@ namespace CA {
         Noop,
     };
 
-    string operator_to_string(Operator op) {
+    inline string operator_to_string(Operator op) {
         switch (op) {
             using enum Operator;
             case Incr:  return "Incr";
@@ -63,7 +63,7 @@ namespace CA {
         CanExit,
     };
 
-    string guard_to_string(Guard grd) {
+    inline string guard_to_string(Guard grd) {
         switch (grd) {
             using enum Guard;
             case True:      return "True";
@@ -111,6 +111,7 @@ namespace CA {
         public:
             using Transitions = std::vector<Transition>;
             State () : transitions_(), cnt_(0), final_(Guard::False) {}
+            State (CounterId cnt) : transitions_(), cnt_(cnt), final_(Guard::False) {}
 
             void add_transition(Transition &&trans) { transitions_.push_back(trans); }
             Transitions &transitions() { return transitions_; }
@@ -122,10 +123,12 @@ namespace CA {
                 } 
             }
             Guard final() const { return final_; }
+            CounterId cnt() const { return cnt_; } 
 
             string to_string(string indent="") const {
                 string str{};
-                str += "{F:"s + guard_to_string(final_) + "|Transitions:\n"s;
+                str += "{F:"s + guard_to_string(final_) + "|C:"s 
+                    + std::to_string(cnt_) + "|Transitions:\n"s;
                 for (auto& trans : transitions_) {
                     str += indent + "\t"s + trans.to_string() + "\n"s;
                 }
@@ -134,7 +137,9 @@ namespace CA {
             string to_DOT(StateId id) const {
                 string str{};
                 string str_id = std::to_string(id);
-                str += str_id + "[label=\""s + str_id + "|"s + guard_to_string(final_) + "\"]\n"s;
+                str += str_id + "[label=\""s + str_id + "|"s 
+                    + guard_to_string(final_) + "|C:"s 
+                    + std::to_string(cnt_) + "\"]\n"s;
                 for (auto const &t : transitions_) {
                     str += str_id + " -> " + t.to_DOT() + "\n";
                 }
@@ -153,11 +158,12 @@ namespace CA {
         public:
 
 
-        CA() : counters_(), states_() {}
+        CA() : counters_(), states_(), init_(0) { states_.push_back(State());}
 
         State& get_state(StateId id) { assert(id < states_.size()); return states_[id]; }
-        StateId add_state() { states_.push_back(State()); return states_.size() - 1; }
-        size_t state_count() { return states_.size(); }
+        StateId add_state(CounterId cnt=0) { states_.push_back(State(cnt)); return states_.size() - 1; }
+        size_t state_count() const { return states_.size(); }
+        State& get_init() { return get_state(init_); } 
 
         Counter& get_counter(CounterId id) { assert(id - 1 < counters_.size()); return counters_[id-1]; }
         CounterId add_counter(Counter &&cnt) { counters_.push_back(cnt); return counters_.size(); }
@@ -167,11 +173,11 @@ namespace CA {
         string to_string() {
             string str{};
             str += "CA {\n\tCounters:\n"s;
-            for (auto i = 1; i < counters_.size(); i++) {
-                str += "\t\t"s + std::to_string(i) + ": "s + counters_[i].to_string() + "\n"s;
+            for (size_t i = 0; i < counters_.size(); i++) {
+                str += "\t\t"s + std::to_string(i+1) + ": "s + counters_[i].to_string() + "\n"s;
             }
             str += "\tStates:\n"s;
-            for (auto i = 0; i < states_.size(); i++) {
+            for (size_t i = 0; i < states_.size(); i++) {
                 str += "\t\t"s + std::to_string(i) + ": "s + states_[i].to_string("\t\t") + "\n"s;
             }
             return str + "}"s;
@@ -191,5 +197,6 @@ namespace CA {
             // stores final condition and transitions for each state
             // index indentifies state
             States states_;
+            StateId init_;
     };
 }

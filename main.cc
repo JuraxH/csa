@@ -27,31 +27,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     //auto b = Builder("[^©-®]");
-    auto b = Builder(argv[1]);
-    auto regexp = b.regexp();
-    cout << "original: " << regexp->ToString() << "\n";
-    auto regexp_str = b.regexp()->ToString();
-    cout << regexp_str << endl;
-    for (char &a : regexp_str) {
-        cout << a << ", ";
-    }
-    auto p = b.prog();
-    cout << "bytemap_range: " << b.bytemap_range() << endl;
-    cout << p->Dump();
-    cout << endl;
-    regexp = remove_captures(regexp);
-    cout << "without captures: " << regexp->ToString() << "\n";
-    cout << "is nullable: " << is_nullable(regexp) << "\n";
-    regexp = normalize(regexp);
-    cout << "normalized: " << regexp->ToString() << "\n";
-    auto eq = Equation::get_eq(regexp);
-    
-    if (regexp->op() == re2::kRegexpCharClass) {
-        auto cc = regexp->cc(); 
-        print_char_class(cc);
-        auto negated_cc = cc->Negate();
-        cout << "negated: \n";
-        print_char_class(negated_cc);
-    }
-
+    auto b = Builder::get_ca(argv[1]);
+    cout << b.to_string() << "\n"s;
+    cout << b.to_DOT() << "\n"s;
 }
