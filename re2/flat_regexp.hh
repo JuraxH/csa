@@ -23,24 +23,12 @@ namespace re2 {
 //
 namespace FlatRegexp {
 
+    using namespace std::string_literals;
     using std::string;
     using std::to_string;
     using std::vector;
-    using namespace std::string_literals;
-
-
-
-
-    class AsciiChar {
-        public:
-        AsciiChar(char ch) : ch_(ch) {}
-        string to_str() const { return string{ch_}; }
-        private:
-        char ch_;
-    };
 
     using ByteType = uint8_t;
-    using SymbolContainer = std::unordered_set<ByteType>;
 
 
     class Epsilon {
@@ -51,8 +39,10 @@ namespace FlatRegexp {
     class Byte {
         public:
         Byte(ByteType byte) : byte_(byte) {}
+        
         ByteType byte() const { return byte_; }
         string to_str() const { return to_string(byte_); }
+
         private:
         ByteType byte_;
     };
@@ -61,6 +51,7 @@ namespace FlatRegexp {
         public:
         Bytes(vector<ByteType>&& bytes) : bytes_(bytes) {}
         Bytes(vector<ByteType>& bytes) : bytes_(bytes) {}
+
         vector<ByteType> const &bytes() const { return bytes_; }
 
         string to_str() const { 
@@ -70,6 +61,7 @@ namespace FlatRegexp {
             }
             return str;
         }
+
         private:
         std::vector<ByteType> bytes_;
     };
@@ -79,7 +71,9 @@ namespace FlatRegexp {
         public:
         AlterType(vector<T>&& subs) : subs_(subs) {}
         AlterType(vector<T>& subs) : subs_(subs) {}
+
         vector<T> const &subs() const { return subs_; }
+
         string to_str() const { 
             string str{};
             auto first = true;
@@ -89,6 +83,7 @@ namespace FlatRegexp {
             }
             return str;
         }
+
         private:
         std::vector<T> subs_;
     };
@@ -98,7 +93,9 @@ namespace FlatRegexp {
         public:
         ConcatType(vector<T>&& subs) : subs_(subs) {}
         ConcatType(vector<T>& subs) : subs_(subs) {}
+
         vector<T> const &subs() const { return subs_; }
+
         string to_str() const { 
             string str{};
             for (auto const &sub : subs_) {
@@ -106,6 +103,7 @@ namespace FlatRegexp {
             }
             return str;
         }
+
         private:
         std::vector<T> subs_;
     };
@@ -116,6 +114,7 @@ namespace FlatRegexp {
         RepeatType(T &&sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
         RepeatType(T &sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
         RepeatType(T const &sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
+
         T const &sub() const { return *sub_; }
         int min() const { return min_; }
         int max() const { return max_; }
@@ -124,20 +123,24 @@ namespace FlatRegexp {
             string sub_str = visit([](auto const &expr) -> string
                     { return expr.to_str(); },
                     *sub_);
-            return "("s + sub_str + "){"s + to_string(min_) + ","s + to_string(max_) + "}"s;
+            return "("s + sub_str + "){"s + to_string(min_) 
+                + ","s + to_string(max_) + "}"s;
         }
+
         private:
-        std::shared_ptr<T> sub_;
+        std::shared_ptr<T> sub_; // could probably be unique, i could not compile it
         int min_;
         int max_;
     };
 
+    // could be replaced with R(R){0,-1}, but that is done latter, to save memory
     template<typename T>
     class PlusType {
         public:
         PlusType(T &&sub) : sub_(new T(sub)) { }
         PlusType(T &sub) : sub_(new T(sub)) { }
         PlusType(T const &sub) : sub_(new T(sub)) { }
+
         T const &sub() const { return *sub_; }
 
         string to_str() const {
@@ -146,11 +149,12 @@ namespace FlatRegexp {
                     *sub_);
             return sub_str + "("s + sub_str + ")*"s;
         }
+
         private:
         std::shared_ptr<T> sub_;
     };
 
-    // hack to define recursive variant
+    // definition of recursive variant
     template<typename T>
     using Var = std::variant<Epsilon, Byte, Bytes, AlterType<T>, ConcatType<T>, RepeatType<T>, PlusType<T>>;
 
@@ -159,7 +163,6 @@ namespace FlatRegexp {
     struct Fix : K<Fix<K>> {
         using K<Fix>::K;
     };
-
 
     using RegexpNode = Fix<Var>;
 
@@ -171,22 +174,25 @@ namespace FlatRegexp {
     class FlatRegexp {
         public:
         FlatRegexp(string const &pattern) : regexp_(nullptr), options_(), 
-                prog_(nullptr), bytemap_(nullptr), bytemap_range_(),
-                top_node_() {
+        prog_(nullptr), bytemap_(nullptr), bytemap_range_(), top_node_() {
             regexp_ = re2::Regexp::Parse(pattern, 
                     static_cast<re2::Regexp::ParseFlags>(options_.ParseFlags()), 
                     nullptr);
             if (regexp_ == nullptr) {
                 throw std::runtime_error("Parsing of regex failed");
             }
+
             prog_ = regexp_->CompileToProg(options_.max_mem() * 2 / 3);
             if (prog_ == nullptr) {
                 throw std::runtime_error("Building of bytemap failed");
             }
+
             bytemap_range_ = prog_->bytemap_range();
             bytemap_ = prog_->bytemap();
+
             flatten();
         }
+
         FlatRegexp(FlatRegexp && other) : regexp_(other.regexp_), options_(other.options_), 
                 prog_(other.prog_), bytemap_(other.bytemap_), bytemap_range_(other.bytemap_range_),
                 top_node_(std::move(other.top_node_)) {
@@ -194,6 +200,7 @@ namespace FlatRegexp {
             other.regexp_ = nullptr;
             other.prog_ = nullptr;
         }
+
         FlatRegexp& operator=(FlatRegexp && other) {
             if (this != std::addressof(other)) {
                 if (regexp_ != nullptr) {
@@ -215,11 +222,6 @@ namespace FlatRegexp {
             return *this;
         }
 
-        RegexpNode& top_node() { return top_node_; };
-        re2::Regexp *regexp() { return regexp_; }
-        re2::Prog *prog() { return prog_; }
-        int bytemap_range() { return bytemap_range_; }
-
         ~FlatRegexp() {
             if (regexp_ != nullptr) {
                 regexp_->Decref();
@@ -229,12 +231,15 @@ namespace FlatRegexp {
             }
         }
 
-        private:
+        RegexpNode& top_node() { return top_node_; };
+        re2::Regexp *regexp() { return regexp_; }
+        re2::Prog *prog() { return prog_; }
+        int bytemap_range() const { return bytemap_range_; }
 
+        private:
         ByteType byte_to_symbol(uint8_t byte) {
             return bytemap_[byte];
         }
-
 
         vector<ByteType> runes_to_symbols(Regexp *re) {
             assert(re->op() == re2::kRegexpLiteralString);
@@ -257,7 +262,6 @@ namespace FlatRegexp {
             }
             return subs;
         }
-
 
         RegexpNode flatten_node(Regexp *re) {
             switch (re->op()) {

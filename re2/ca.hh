@@ -16,27 +16,27 @@ namespace CA {
     using Symbol = uint8_t;
     using StateId = unsigned;
 
-    // id for places without counter
+    // counter id for states without counter
     const CounterId NoCounter = 0;
 
     template<typename T>
     class CounterType {
         public:
-            CounterType(T min, T max) : min_(min), max_(max) {}
+        CounterType(T min, T max) : min_(min), max_(max) {}
 
-            T min() const { return min_; }
-            T max() const { return max_; }
-            string to_string() const {
-                return "{min: "s + std::to_string(min_) + " max: "s + std::to_string(max_) + "}"s;
-            }
+        T min() const { return min_; }
+        T max() const { return max_; }
+        string to_string() const {
+            return "{min: "s + std::to_string(min_) + " max: "s 
+                + std::to_string(max_) + "}"s;
+        }
         private:
-            T min_;
-            T max_;
+        T min_;
+        T max_;
     };
 
     using Counter = CounterType<int>;
     using Counters = std::vector<Counter>; 
-
 
     enum class Operator {
         Incr,
@@ -76,30 +76,35 @@ namespace CA {
 
     class Transition {
         public:
-            Transition(Symbol symbol, StateId target, 
-                    Guard grd, Operator op) : symbol_(symbol),
-                    target_(target), grd_(grd), op_(op) {} 
+        Transition(Symbol symbol, StateId target, 
+                Guard grd, Operator op) : symbol_(symbol),
+                target_(target), grd_(grd), op_(op) {} 
 
-            Symbol symbol() const { return symbol_; }
-            StateId target() const { return target_; }
-            Guard &grd() { return grd_; }
-            Operator &op() { return op_; }
-            string to_string() const {
-                string str{};
-                str += "{B:"s + std::to_string(symbol_) + "|T:"s + std::to_string(target_) + "|G:"s;
-                str += guard_to_string(grd_);
-                str += "|O:"s;
-                str += operator_to_string(op_);
-                return str + "}";
-            }
-            string to_DOT() const {
-                string str{};
-                str += std::to_string(target_) + "[label=\""s + std::to_string(symbol_) + "|G:"s;
-                str += guard_to_string(grd_);
-                str += "|O:";
-                str += operator_to_string(op_);
-                return str + "\"]"s;
-            }
+        Symbol symbol() const { return symbol_; }
+        StateId target() const { return target_; }
+        Guard &grd() { return grd_; }
+        Operator &op() { return op_; }
+
+        string to_string() const {
+            string str{};
+            str += "{B:"s + std::to_string(symbol_) + "|T:"s 
+                + std::to_string(target_) + "|G:"s
+                + guard_to_string(grd_)
+                + "|O:"s
+                + operator_to_string(op_);
+            return str + "}";
+        }
+
+        string to_DOT() const {
+            string str{};
+            str += std::to_string(target_) + "[label=\""s 
+                + std::to_string(symbol_) + "|G:"s
+                + guard_to_string(grd_)
+                + "|O:"
+                + operator_to_string(op_);
+            return str + "\"]"s;
+        }
+
         private:
             Symbol symbol_;
             StateId target_;
@@ -110,11 +115,13 @@ namespace CA {
     class State {
         public:
             using Transitions = std::vector<Transition>;
+
             State () : transitions_(), cnt_(0), final_(Guard::False) {}
             State (CounterId cnt) : transitions_(), cnt_(cnt), final_(Guard::False) {}
 
             void add_transition(Transition &&trans) { transitions_.push_back(trans); }
             Transitions &transitions() { return transitions_; }
+
             void set_final(Counters const &cnts) { 
                 if (cnt_ && cnts[cnt_ - 1].min() != 0) {
                     final_ = Guard::CanExit; 
@@ -122,6 +129,7 @@ namespace CA {
                     final_ = Guard::True; 
                 } 
             }
+
             Guard final() const { return final_; }
             CounterId cnt() const { return cnt_; } 
 
@@ -134,6 +142,7 @@ namespace CA {
                 }
                 return str + indent + "}"s;
             }
+
             string to_DOT(StateId id) const {
                 string str{};
                 string str_id = std::to_string(id);
@@ -158,23 +167,40 @@ namespace CA {
         public:
 
 
-        CA() : counters_(), states_(), init_(0) { states_.push_back(State());}
+        CA() : counters_(), states_({State()}) { }
 
-        State& get_state(StateId id) { assert(id < states_.size()); return states_[id]; }
-        StateId add_state(CounterId cnt=0) { states_.push_back(State(cnt)); return states_.size() - 1; }
+        State& get_state(StateId id) { 
+            assert(id < states_.size()); 
+            return states_[id]; 
+        }
+
+        StateId add_state(CounterId cnt=0) { 
+            assert(cnt <= counters_.size()); 
+            states_.push_back(State(cnt));
+            return states_.size() - 1; 
+        }
         size_t state_count() const { return states_.size(); }
-        State& get_init() { return get_state(init_); } 
+        State& get_init() { return get_state(0); } 
 
-        Counter& get_counter(CounterId id) { assert(id - 1 < counters_.size()); return counters_[id-1]; }
-        CounterId add_counter(Counter &&cnt) { counters_.push_back(cnt); return counters_.size(); }
+        Counter& get_counter(CounterId id) { 
+            assert(id - 1 < counters_.size());
+            return counters_[id-1]; 
+        }
+
+        CounterId add_counter(Counter &&cnt) { 
+            counters_.push_back(cnt); 
+            return counters_.size(); 
+        }
+
         Counters& get_counters() { return counters_; }
-        size_t counter_count() { return counters_.size(); }
+        size_t counter_count() const { return counters_.size(); }
 
-        string to_string() {
+        string to_string() const {
             string str{};
             str += "CA {\n\tCounters:\n"s;
             for (size_t i = 0; i < counters_.size(); i++) {
-                str += "\t\t"s + std::to_string(i+1) + ": "s + counters_[i].to_string() + "\n"s;
+                str += "\t\t"s + std::to_string(i+1) + ": "s 
+                    + counters_[i].to_string() + "\n"s;
             }
             str += "\tStates:\n"s;
             for (size_t i = 0; i < states_.size(); i++) {
@@ -185,7 +211,7 @@ namespace CA {
 
         string to_DOT() const {
             string str{"digraph CA {\n"s};
-            for (auto i = 0; i < states_.size(); i++) {
+            for (size_t i = 0; i < states_.size(); i++) {
                 str += states_[i].to_DOT(i);
             }
             return str + "}\n"s;
@@ -194,9 +220,7 @@ namespace CA {
         private:
             // array of all counters in CA, index is counter ID
             Counters counters_; 
-            // stores final condition and transitions for each state
-            // index indentifies state
+            // maps state id to state
             States states_;
-            StateId init_;
     };
 }
