@@ -49,8 +49,8 @@ namespace FlatRegexp {
 
     class Bytes {
         public:
-        Bytes(vector<ByteType>&& bytes) : bytes_(bytes) {}
-        Bytes(vector<ByteType>& bytes) : bytes_(bytes) {}
+        Bytes(vector<ByteType>&& bytes) : bytes_(std::move(bytes)) {}
+        Bytes(vector<ByteType> const& bytes) : bytes_(bytes) {}
 
         vector<ByteType> const &bytes() const { return bytes_; }
 
@@ -69,7 +69,7 @@ namespace FlatRegexp {
     template<typename T>
     class AlterType {
         public:
-        AlterType(vector<T>&& subs) : subs_(subs) {}
+        AlterType(vector<T>&& subs) : subs_(std::move(subs)) {}
         AlterType(vector<T>& subs) : subs_(subs) {}
 
         vector<T> const &subs() const { return subs_; }
@@ -91,7 +91,7 @@ namespace FlatRegexp {
     template<typename T>
     class ConcatType {
         public:
-        ConcatType(vector<T>&& subs) : subs_(subs) {}
+        ConcatType(vector<T>&& subs) : subs_(std::move(subs)) {}
         ConcatType(vector<T>& subs) : subs_(subs) {}
 
         vector<T> const &subs() const { return subs_; }
@@ -111,7 +111,7 @@ namespace FlatRegexp {
     template<typename T>
     class RepeatType {
         public:
-        RepeatType(T &&sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
+        RepeatType(T &&sub, int min, int max) : sub_(new T(std::move(sub))), min_(min), max_(max) { }
         RepeatType(T &sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
         RepeatType(T const &sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
 
@@ -137,7 +137,7 @@ namespace FlatRegexp {
     template<typename T>
     class PlusType {
         public:
-        PlusType(T &&sub) : sub_(new T(sub)) { }
+        PlusType(T &&sub) : sub_(new T(std::move(sub))) { }
         PlusType(T &sub) : sub_(new T(sub)) { }
         PlusType(T const &sub) : sub_(new T(sub)) { }
 
@@ -164,6 +164,7 @@ namespace FlatRegexp {
         using K<Fix>::K;
     };
 
+    // fixed definition of variant
     using RegexpNode = Fix<Var>;
 
     using Concat = ConcatType<RegexpNode>;
@@ -269,21 +270,21 @@ namespace FlatRegexp {
                 case re2::kRegexpEmptyMatch:
                     return Epsilon();
                 case re2::kRegexpLiteral: {
-                    char bytes[re2::UTFmax];
+                    char chars[re2::UTFmax];
                     int rune = re->rune();
-                    int len = runetochar(bytes, &rune);
+                    int len = runetochar(chars, &rune);
                     if (len == 1) {
-                        return Byte(byte_to_symbol(bytes[0]));
+                        return Byte(byte_to_symbol(chars[0]));
                     } else {
                         std::vector<ByteType> bytes(len);
                         for (auto i = 0; i < len; i++) {
-                            bytes[i] = byte_to_symbol(bytes[i]);
+                            bytes[i] = byte_to_symbol(chars[i]);
                         }
                         return Bytes(std::move(bytes));
                     }
                 }
                 case re2::kRegexpLiteralString:
-                    return Bytes(std::move(runes_to_symbols(re)));
+                    return Bytes(runes_to_symbols(re));
                 case re2::kRegexpConcat:
                     return Concat(flatten_subs(re));
                 case re2::kRegexpAlternate:

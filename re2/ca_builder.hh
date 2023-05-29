@@ -16,14 +16,6 @@ namespace CA
         UniqueByte() = default;
         UniqueByte(uint8_t byte, uint8_t id) : byte_(byte), id_(id) {}
 
-        UniqueByte(UniqueByte const &) = default;
-        UniqueByte(UniqueByte &&) = default;
-        UniqueByte(UniqueByte &) = default;
-
-        UniqueByte& operator=(UniqueByte&&) = default;
-        UniqueByte& operator=(UniqueByte&) = default;
-        UniqueByte& operator=(UniqueByte const &) = default;
-
         uint8_t byte() const { return byte_; }
         uint8_t id() const { return id_; }
 
