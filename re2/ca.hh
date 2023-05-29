@@ -13,7 +13,7 @@ namespace CA {
     using std::string;
 
     using CounterId = unsigned;
-    using Symbol = int;
+    using Symbol = uint8_t;
     using StateId = unsigned;
 
     // id for places without counter
@@ -24,9 +24,9 @@ namespace CA {
         public:
             CounterType(T min, T max) : min_(min), max_(max) {}
 
-            T min() { return min_; }
-            T max() { return max_; }
-            string to_string() {
+            T min() const { return min_; }
+            T max() const { return max_; }
+            string to_string() const {
                 return "{min: "s + std::to_string(min_) + " max: "s + std::to_string(max_) + "}"s;
             }
         private:
@@ -35,36 +35,37 @@ namespace CA {
     };
 
     using Counter = CounterType<int>;
+    using Counters = std::vector<Counter>; 
 
 
-    enum class OperatorEnum {
+    enum class Operator {
         Incr,
         Rst,
         ID,
-        Exit,
+        Noop,
     };
 
-    string operator_to_string(OperatorEnum op) {
+    string operator_to_string(Operator op) {
         switch (op) {
-            using enum OperatorEnum;
+            using enum Operator;
             case Incr:  return "Incr";
             case Rst:   return "Rst";
             case ID:    return "ID";
-            case Exit:  return "Exit";
+            case Noop:  return "Noop";
         }
         return "";
     }
 
-    enum class GuardEnum {
+    enum class Guard {
         True,
         False,
         CanIncr,
         CanExit,
     };
 
-    string guard_to_string(GuardEnum grd) {
+    string guard_to_string(Guard grd) {
         switch (grd) {
-            using enum GuardEnum;
+            using enum Guard;
             case True:      return "True";
             case False:     return "False";
             case CanIncr:   return "CanIncr";
@@ -73,93 +74,58 @@ namespace CA {
         return "";
     }
 
-    class Operator {
-        public:
-            Operator(OperatorEnum op, CounterId cnt_id) 
-                : op_(op), cnt_id_(cnt_id) {}
-
-            OperatorEnum op() const { return op_; }
-            CounterId cnt_id() const { return cnt_id_; }
-            string to_string() const {
-                return "{"s + operator_to_string(op_) + "|"s + std::to_string(cnt_id_) + "}"s;
-            }
-
-        private:
-            OperatorEnum op_; CounterId cnt_id_;
-    };
-    class Guard {
-        public:
-            Guard(GuardEnum grd, CounterId cnt_id) 
-                : grd_(grd), cnt_id_(cnt_id) {}
-
-            GuardEnum grd() const { return grd_; }
-            CounterId cnt_id() const { return cnt_id_; }
-            string to_string() const {
-                return "{"s + guard_to_string(grd_) + "|"s + std::to_string(cnt_id_) + "}"s;
-            }
-
-        private:
-            GuardEnum grd_;
-            CounterId cnt_id_;
-    };
-
     class Transition {
         public:
-            using Guards = std::vector<Guard>;
-            using Operators = std::vector<Operator>;
-
             Transition(Symbol symbol, StateId target, 
-                    Guards &&grds, Operators &&ops) : symbol_(symbol),
-                    target_(target), grds_(grds), ops_(ops) {} 
+                    Guard grd, Operator op) : symbol_(symbol),
+                    target_(target), grd_(grd), op_(op) {} 
 
             Symbol symbol() const { return symbol_; }
             StateId target() const { return target_; }
-            Guards &grds() { return grds_; }
-            Operators &ops() { return ops_; }
+            Guard &grd() { return grd_; }
+            Operator &op() { return op_; }
             string to_string() const {
                 string str{};
                 str += "{B:"s + std::to_string(symbol_) + "|T:"s + std::to_string(target_) + "|G:"s;
-                for (auto& grd : grds_) {
-                    str += grd.to_string();
-                }
+                str += guard_to_string(grd_);
                 str += "|O:"s;
-                for (auto &op : ops_) {
-                    str += op.to_string();
-                }
+                str += operator_to_string(op_);
                 return str + "}";
             }
             string to_DOT() const {
                 string str{};
                 str += std::to_string(target_) + "[label=\""s + std::to_string(symbol_) + "|G:"s;
-                for (auto const &grd : grds_) {
-                    str += grd.to_string();
-                }
+                str += guard_to_string(grd_);
                 str += "|O:";
-                for (auto const &op : ops_) {
-                    str += op.to_string();
-                }
+                str += operator_to_string(op_);
                 return str + "\"]"s;
             }
         private:
             Symbol symbol_;
             StateId target_;
-            Guards grds_;
-            Operators ops_;
+            Guard grd_;
+            Operator op_;
     };
 
     class State {
         public:
             using Transitions = std::vector<Transition>;
-            State () : transitions_(), final_(Guard{GuardEnum::False, NoCounter}) {}
+            State () : transitions_(), cnt_(0), final_(Guard::False) {}
 
             void add_transition(Transition &&trans) { transitions_.push_back(trans); }
             Transitions &transitions() { return transitions_; }
-            void set_final(Guard &&grd) { final_ = grd; }
+            void set_final(Counters const &cnts) { 
+                if (cnt_ && cnts[cnt_ - 1].min() != 0) {
+                    final_ = Guard::CanExit; 
+                } else {
+                    final_ = Guard::True; 
+                } 
+            }
             Guard final() const { return final_; }
 
             string to_string(string indent="") const {
                 string str{};
-                str += "{F:"s + final_.to_string() + "|Transitions:\n"s;
+                str += "{F:"s + guard_to_string(final_) + "|Transitions:\n"s;
                 for (auto& trans : transitions_) {
                     str += indent + "\t"s + trans.to_string() + "\n"s;
                 }
@@ -168,7 +134,7 @@ namespace CA {
             string to_DOT(StateId id) const {
                 string str{};
                 string str_id = std::to_string(id);
-                str += str_id + "[label=\""s + str_id + "|"s + final_.to_string() + "\"]\n"s;
+                str += str_id + "[label=\""s + str_id + "|"s + guard_to_string(final_) + "\"]\n"s;
                 for (auto const &t : transitions_) {
                     str += str_id + " -> " + t.to_DOT() + "\n";
                 }
@@ -177,11 +143,11 @@ namespace CA {
 
         private:
             Transitions transitions_;
+            CounterId cnt_;
             Guard final_;
     };
 
     using States = std::vector<State>;
-    using Counters = std::vector<Counter>; 
 
     class CA {
         public:
@@ -195,6 +161,7 @@ namespace CA {
 
         Counter& get_counter(CounterId id) { assert(id - 1 < counters_.size()); return counters_[id-1]; }
         CounterId add_counter(Counter &&cnt) { counters_.push_back(cnt); return counters_.size(); }
+        Counters& get_counters() { return counters_; }
         size_t counter_count() { return counters_.size(); }
 
         string to_string() {
