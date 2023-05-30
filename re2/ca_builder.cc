@@ -2,9 +2,8 @@
 
 namespace CA {
 
-Fragment Builder::compute(Epsilon const &eps, CounterId cnt) {
-    (void)cnt;
-    (void)eps;
+Fragment Builder::compute([[maybe_unused]] Epsilon const &eps,
+        [[maybe_unused]] CounterId cnt) {
     return Fragment{{}, {}, true};
 }
 
