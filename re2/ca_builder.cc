@@ -2,17 +2,17 @@
 
 namespace CA {
 
-Fragment Builder::compute([[maybe_unused]] Epsilon const &eps,
+[[nodiscard]] Fragment Builder::compute([[maybe_unused]] Epsilon const &eps,
         [[maybe_unused]] CounterId cnt) {
     return Fragment{{}, {}, true};
 }
 
-Fragment Builder::compute(Byte const &byte, CounterId cnt) {
+[[nodiscard]] Fragment Builder::compute(Byte const &byte, CounterId cnt) {
     auto s = add_state(byte.byte(), cnt);
     return Fragment{{s}, {s}, false};
 }
 
-Fragment Builder::compute(Bytes const &bytes, CounterId cnt) {
+[[nodiscard]] Fragment Builder::compute(Bytes const &bytes, CounterId cnt) {
     assert(bytes.bytes().size() != 0); // should not happen
 
     auto const& bts = bytes.bytes();
@@ -27,7 +27,7 @@ Fragment Builder::compute(Bytes const &bytes, CounterId cnt) {
 }
 
 
-Fragment Builder::compute(Alter const &alter, CounterId cnt) {
+[[nodiscard]] Fragment Builder::compute(Alter const &alter, CounterId cnt) {
     Fragment frag{{},{}, false};
     for (RegexpNode const &sub : alter.subs()) {
         Fragment sub_frag = visit([this, cnt] (auto const & arg) {
@@ -45,7 +45,7 @@ Fragment Builder::compute(Alter const &alter, CounterId cnt) {
     return frag;
 }
 
-Fragment Builder::compute(Concat const &concat, CounterId cnt) {
+[[nodiscard]] Fragment Builder::compute(Concat const &concat, CounterId cnt) {
     Fragment frag{{},{}, true};
     bool start = true;
     auto const &subs = concat.subs();
@@ -79,7 +79,7 @@ Fragment Builder::compute(Concat const &concat, CounterId cnt) {
     return frag;
 }
 
-Fragment Builder::compute(Repeat const &repeat, CounterId cnt) {
+[[nodiscard]] Fragment Builder::compute(Repeat const &repeat, CounterId cnt) {
     if (repeat.min() == 0 && repeat.max() == -1) { // no need for counting
         Fragment frag = visit([this, cnt] (auto const & arg) {
                 return this->compute(arg, cnt); }, repeat.sub());
@@ -115,7 +115,7 @@ Fragment Builder::compute(Repeat const &repeat, CounterId cnt) {
     }
 }
 
-Fragment Builder::compute(Plus const &plus, CounterId cnt) {
+[[nodiscard]] Fragment Builder::compute(Plus const &plus, CounterId cnt) {
     RegexpNode epxr = RegexpNode(Concat({ 
                 plus.sub(),
                 RegexpNode(Repeat(plus.sub(), 0, -1)) 

@@ -16,10 +16,10 @@ namespace CA
         UniqueByte() = default;
         UniqueByte(uint8_t byte, uint8_t id) : byte_(byte), id_(id) {}
 
-        uint8_t byte() const { return byte_; }
-        uint8_t id() const { return id_; }
+        [[nodiscard]] uint8_t byte() const { return byte_; }
+        [[nodiscard]] uint8_t id() const { return id_; }
 
-        string to_str() const {
+        [[nodiscard]] string to_str() const {
             return to_string(byte_) + "["s + to_string(id_) + "]"s;
         }
 
@@ -37,7 +37,7 @@ namespace CA
 
     class Builder {
         private:
-        UniqueByte add_state(uint8_t byte, CounterId cnt) {
+        [[nodiscard]] UniqueByte add_state(uint8_t byte, CounterId cnt) {
             assert(byte <= flat_.bytemap_range());
             
             auto id = ca_.add_state(cnt);
@@ -45,7 +45,7 @@ namespace CA
             return UniqueByte(byte, map_to_state[byte].size() - 1);
         }
 
-        StateId ub_to_sid(UniqueByte const &ub) const {
+        [[nodiscard]] StateId ub_to_sid(UniqueByte const &ub) const {
             assert(ub.byte() <= flat_.bytemap_range());
             assert(ub.id() < map_to_state[ub.byte()].size());
 
@@ -124,13 +124,13 @@ namespace CA
         }
 
         // functions that are used by visitor of RegexpNode
-        Fragment compute(Epsilon const &eps, CounterId cnt);
-        Fragment compute(Byte const &byte, CounterId cnt);
-        Fragment compute(Bytes const &bytes, CounterId cnt);
-        Fragment compute(Alter const &alter, CounterId cnt);
-        Fragment compute(Concat const &concat, CounterId cnt);
-        Fragment compute(Repeat const &repeat, CounterId cnt);
-        Fragment compute(Plus const &plus, CounterId cnt);
+        [[nodiscard]] Fragment compute(Epsilon const &eps, CounterId cnt);
+        [[nodiscard]] Fragment compute(Byte const &byte, CounterId cnt);
+        [[nodiscard]] Fragment compute(Bytes const &bytes, CounterId cnt);
+        [[nodiscard]] Fragment compute(Alter const &alter, CounterId cnt);
+        [[nodiscard]] Fragment compute(Concat const &concat, CounterId cnt);
+        [[nodiscard]] Fragment compute(Repeat const &repeat, CounterId cnt);
+        [[nodiscard]] Fragment compute(Plus const &plus, CounterId cnt);
 
         Builder(string const &pattern) : flat_(pattern), ca_(),
         map_to_state(flat_.bytemap_range() + 1, vector<StateId>{}) { 
@@ -160,7 +160,7 @@ namespace CA
 
         public:
         // interface for getting the CA
-        static CA get_ca(string const &pattern) {
+        [[nodiscard]] static CA get_ca(string const &pattern) {
             std::cout << "<< get_ca\n";
             return Builder(pattern).ca_;
         }

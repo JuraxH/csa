@@ -232,17 +232,17 @@ namespace FlatRegexp {
             }
         }
 
-        RegexpNode& top_node() { return top_node_; };
-        re2::Regexp *regexp() { return regexp_; }
-        re2::Prog *prog() { return prog_; }
-        int bytemap_range() const { return bytemap_range_; }
+        [[nodiscard]] RegexpNode& top_node() { return top_node_; };
+        [[nodiscard]] re2::Regexp *regexp() { return regexp_; }
+        [[nodiscard]] re2::Prog *prog() { return prog_; }
+        [[nodiscard]] int bytemap_range() const { return bytemap_range_; }
 
         private:
-        ByteType byte_to_symbol(uint8_t byte) {
+        [[nodiscard]] ByteType byte_to_symbol(uint8_t byte) {
             return bytemap_[byte];
         }
 
-        vector<ByteType> runes_to_symbols(Regexp *re) {
+        [[nodiscard]] vector<ByteType> runes_to_symbols(Regexp *re) {
             assert(re->op() == re2::kRegexpLiteralString);
             char chars[UTFmax];
             auto bytes = vector<ByteType>{};
@@ -256,7 +256,7 @@ namespace FlatRegexp {
             return bytes;
         }
 
-        vector<RegexpNode> flatten_subs(Regexp *re) {
+        [[nodiscard]] vector<RegexpNode> flatten_subs(Regexp *re) {
             vector<RegexpNode> subs(re->nsub());
             for (auto i = 0; i < re->nsub(); i++) {
                 subs[i] = flatten_node(re->sub()[i]);
@@ -264,7 +264,7 @@ namespace FlatRegexp {
             return subs;
         }
 
-        RegexpNode flatten_node(Regexp *re) {
+        [[nodiscard]] RegexpNode flatten_node(Regexp *re) {
             switch (re->op()) {
                 case re2::kRegexpNoMatch:
                 case re2::kRegexpEmptyMatch:
