@@ -133,6 +133,8 @@ namespace CA
 
         Builder(string const &pattern) : flat_(pattern), ca_(),
         map_to_state(flat_.bytemap_range() + 1, vector<StateId>{}) { 
+            ca_.set_bytemap_range(flat_.bytemap_range());
+            ca_.set_bytemap(flat_.bytemap());
             RegexpNode const& top_node = flat_.top_node();
             Fragment frag = visit([this] (auto const & arg) {
                     return this->compute(arg, NoCounter); 

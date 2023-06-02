@@ -15,6 +15,7 @@ namespace CA {
 
     // counter id for states without counter
     const CounterId NoCounter = 0;
+    const size_t ByteMapSize = 256;
 
     template<typename T>
     class CounterType {
@@ -164,7 +165,7 @@ namespace CA {
         public:
 
 
-        CA() : counters_(), states_({State()}) { }
+        CA() : counters_(), states_({State()}), bytemap_(), bytemap_range_(0) { }
 
         [[nodiscard]] State& get_state(StateId id) { 
             assert(id < states_.size()); 
@@ -191,6 +192,21 @@ namespace CA {
 
         [[nodiscard]] Counters& get_counters() { return counters_; }
         [[nodiscard]] size_t counter_count() const { return counters_.size(); }
+
+        [[nodiscard]] uint8_t get_byte_class(uint8_t byte) const { 
+            return bytemap_[byte]; 
+        }
+
+        [[nodiscard]] uint8_t get_bytemap_range() const {
+            return bytemap_range_; 
+        }
+
+        void set_bytemap_range(uint8_t range) { bytemap_range_ = range; }
+        void set_bytemap(uint8_t const* bytemap) { 
+            for (unsigned i = 0; i < ByteMapSize; i++) {
+                bytemap_[i] = bytemap[i];
+            }
+        }
 
         [[nodiscard]] string to_string() const {
             string str{};
@@ -220,5 +236,8 @@ namespace CA {
             Counters counters_; 
             // maps state id to state
             States states_;
+            // bytemap
+            uint8_t bytemap_[ByteMapSize];
+            uint8_t bytemap_range_;
     };
 }

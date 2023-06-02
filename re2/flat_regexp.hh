@@ -236,6 +236,7 @@ namespace FlatRegexp {
         [[nodiscard]] re2::Regexp *regexp() { return regexp_; }
         [[nodiscard]] re2::Prog *prog() { return prog_; }
         [[nodiscard]] int bytemap_range() const { return bytemap_range_; }
+        [[nodiscard]] uint8_t const* bytemap() const { return bytemap_; }
 
         private:
         [[nodiscard]] ByteType byte_to_symbol(uint8_t byte) {
