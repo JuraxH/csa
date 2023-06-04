@@ -162,7 +162,6 @@ namespace CA
         public:
         // interface for getting the CA
         [[nodiscard]] static CA get_ca(string const &pattern) {
-            std::cout << "<< get_ca\n";
             return Builder(pattern).ca_;
         }
     };

@@ -16,6 +16,7 @@ namespace CA {
     // counter id for states without counter
     const CounterId NoCounter = 0;
     const size_t ByteMapSize = 256;
+    const StateId InitState = 0;
 
     template<typename T>
     class CounterType {
@@ -24,6 +25,14 @@ namespace CA {
 
         [[nodiscard]] T min() const { return min_; }
         [[nodiscard]] T max() const { return max_; }
+
+        [[nodiscard]] bool can_incr(unsigned val) const {
+            return max_ == -1 || static_cast<unsigned>(max_) > val;
+        }
+
+        [[nodiscard]] bool can_exit(unsigned val) const {
+            return static_cast<unsigned>(min_) <= val;
+        }
         [[nodiscard]] string to_string() const {
             return "{min: "s + std::to_string(min_) + " max: "s 
                 + std::to_string(max_) + "}"s;
@@ -80,8 +89,8 @@ namespace CA {
 
         [[nodiscard]] Symbol symbol() const { return symbol_; }
         [[nodiscard]] StateId target() const { return target_; }
-        [[nodiscard]] Guard &grd() { return grd_; }
-        [[nodiscard]] Operator &op() { return op_; }
+        [[nodiscard]] Guard grd() const { return grd_; }
+        [[nodiscard]] Operator op() const { return op_; }
 
         [[nodiscard]] string to_string() const {
             string str{};
@@ -118,7 +127,10 @@ namespace CA {
             State (CounterId cnt) : transitions_(), cnt_(cnt), final_(Guard::False) {}
 
             void add_transition(Transition &&trans) { transitions_.push_back(trans); }
-            [[nodiscard]] Transitions &transitions() { return transitions_; }
+
+            [[nodiscard]] Transitions const& transitions() const { return transitions_; }
+            [[nodiscard]] Guard final() const { return final_; }
+            [[nodiscard]] CounterId cnt() const { return cnt_; } 
 
             void set_final(Counters const &cnts) { 
                 if (cnt_ && cnts[cnt_ - 1].min() != 0) {
@@ -128,8 +140,6 @@ namespace CA {
                 } 
             }
 
-            [[nodiscard]] Guard final() const { return final_; }
-            [[nodiscard]] CounterId cnt() const { return cnt_; } 
 
             [[nodiscard]] string to_string(string indent="") const {
                 string str{};
@@ -169,19 +179,22 @@ namespace CA {
 
         [[nodiscard]] State& get_state(StateId id) { 
             assert(id < states_.size()); 
+
             return states_[id]; 
         }
 
         [[nodiscard]] StateId add_state(CounterId cnt=0) { 
             assert(cnt <= counters_.size()); 
+
             states_.push_back(State(cnt));
             return states_.size() - 1; 
         }
         [[nodiscard]] size_t state_count() const { return states_.size(); }
-        [[nodiscard]] State& get_init() { return get_state(0); } 
+        [[nodiscard]] State& get_init() { return get_state(InitState); } 
 
         [[nodiscard]] Counter& get_counter(CounterId id) { 
             assert(id - 1 < counters_.size());
+
             return counters_[id-1]; 
         }
 
@@ -197,7 +210,7 @@ namespace CA {
             return bytemap_[byte]; 
         }
 
-        [[nodiscard]] uint8_t get_bytemap_range() const {
+        [[nodiscard]] uint8_t bytemap_range() const {
             return bytemap_range_; 
         }
 
