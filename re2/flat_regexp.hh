@@ -19,7 +19,6 @@
 
 // TODO:
 //  anychar -- suport multibyte stuff (maybe more of builder thing)
-//  using only one epsilon to save space
 //
 namespace re2::FlatRegexp {
 
@@ -156,8 +155,10 @@ namespace re2::FlatRegexp {
 
     class FlatRegexp {
         public:
-        FlatRegexp(string const &pattern) : regexp_(nullptr), options_(), 
-        prog_(nullptr), bytemap_(nullptr), bytemap_range_(), top_node_() {
+        FlatRegexp(string const &pattern) :
+        epsilon_(make_shared<RegexpNode>(RegexpNode(Epsilon()))),
+        regexp_(nullptr), options_(), prog_(nullptr), bytemap_(nullptr),
+        bytemap_range_(), top_node_() {
             regexp_ = re2::Regexp::Parse(pattern, 
                     static_cast<re2::Regexp::ParseFlags>(options_.ParseFlags()), 
                     nullptr);
@@ -176,13 +177,16 @@ namespace re2::FlatRegexp {
             flatten();
         }
 
-        FlatRegexp(FlatRegexp && other) : regexp_(other.regexp_), options_(other.options_), 
-                prog_(other.prog_), bytemap_(other.bytemap_), bytemap_range_(other.bytemap_range_),
-                top_node_(std::move(other.top_node_)) {
+        FlatRegexp(FlatRegexp && other) : epsilon_(other.epsilon_),
+        regexp_(other.regexp_), options_(other.options_), prog_(other.prog_),
+        bytemap_(other.bytemap_), bytemap_range_(other.bytemap_range_),
+        top_node_(std::move(other.top_node_)) {
             other.bytemap_ = nullptr;
             other.regexp_ = nullptr;
             other.prog_ = nullptr;
         }
+        FlatRegexp(FlatRegexp const&) = delete;
+        FlatRegexp& operator=(FlatRegexp const&) = delete;
 
         FlatRegexp& operator=(FlatRegexp && other) {
             if (this != std::addressof(other)) {
@@ -192,6 +196,7 @@ namespace re2::FlatRegexp {
                 if (prog_ != nullptr) {
                     delete prog_;
                 }
+                epsilon_ = other.epsilon_;
                 regexp_ = other.regexp_;
                 options_ = other.options_;
                 prog_ = other.prog_;
@@ -214,7 +219,7 @@ namespace re2::FlatRegexp {
             }
         }
 
-        [[nodiscard]] RegexpNode& top_node() { return top_node_; };
+        [[nodiscard]] RegexpNode& top_node() { return *top_node_; };
         [[nodiscard]] re2::Regexp *regexp() { return regexp_; }
         [[nodiscard]] re2::Prog *prog() { return prog_; }
         [[nodiscard]] int bytemap_range() const { return bytemap_range_; }
@@ -242,53 +247,63 @@ namespace re2::FlatRegexp {
         [[nodiscard]] vector<shared_ptr<RegexpNode>> flatten_subs(Regexp *re) {
             vector<shared_ptr<RegexpNode>> subs(re->nsub());
             for (auto i = 0; i < re->nsub(); i++) {
-                subs[i] = make_shared<RegexpNode>(RegexpNode(flatten_node(re->sub()[i])));
+                subs[i] = flatten_node(re->sub()[i]);
             }
             return subs;
         }
 
-        [[nodiscard]] RegexpNode flatten_node(Regexp *re) {
+        [[nodiscard]] shared_ptr<RegexpNode> flatten_node(Regexp *re) {
             switch (re->op()) {
                 case re2::kRegexpNoMatch:
                 case re2::kRegexpEmptyMatch:
-                    return Epsilon();
+                    return epsilon_;
                 case re2::kRegexpLiteral: {
                     char chars[re2::UTFmax];
                     int rune = re->rune();
                     int len = runetochar(chars, &rune);
                     if (len == 1) {
-                        return Byte(byte_to_symbol(chars[0]));
+                        return make_shared<RegexpNode>(
+                                RegexpNode(Byte(byte_to_symbol(chars[0]))));
                     } else {
                         std::vector<ByteType> bytes(len);
                         for (auto i = 0; i < len; i++) {
                             bytes[i] = byte_to_symbol(chars[i]);
                         }
-                        return Bytes(std::move(bytes));
+                        return make_shared<RegexpNode>(
+                                RegexpNode(Bytes(std::move(bytes))));
                     }
                 }
                 case re2::kRegexpLiteralString:
-                    return Bytes(runes_to_symbols(re));
+                    return make_shared<RegexpNode>(
+                                RegexpNode(Bytes(runes_to_symbols(re))));
                 case re2::kRegexpConcat:
-                    return Concat(flatten_subs(re));
+                    return make_shared<RegexpNode>(
+                                RegexpNode(Concat(flatten_subs(re))));
                 case re2::kRegexpAlternate:
-                    return Alter(flatten_subs(re));
+                    return make_shared<RegexpNode>(
+                                RegexpNode(Alter(flatten_subs(re))));
                 case re2::kRegexpStar:
-                    return Repeat(flatten_node(re->sub()[0]), 0, -1);
+                    return make_shared<RegexpNode>(
+                                RegexpNode(Repeat(flatten_node(re->sub()[0]), 0, -1)));
                 case re2::kRegexpRepeat:
-                    return Repeat(flatten_node(re->sub()[0]), re->min(), re->max());
+                    return make_shared<RegexpNode>(
+                                RegexpNode(Repeat(flatten_node(re->sub()[0]), re->min(), re->max())));
                 case re2::kRegexpPlus: {
-                    shared_ptr<RegexpNode> sub = make_shared<RegexpNode>(flatten_node(re->sub()[0]));
-                    return Concat({
-                            sub,
-                            make_shared<RegexpNode>(RegexpNode(Repeat(sub, 0, -1)))
-                            }); 
+                    shared_ptr<RegexpNode> sub = flatten_node(re->sub()[0]);
+                    return make_shared<RegexpNode>(RegexpNode(Concat({
+                                    sub,
+                                    make_shared<RegexpNode>(RegexpNode(Repeat(sub, 0, -1)))
+                                    }))); 
                 }
                 case re2::kRegexpQuest:
-                    return Alter({make_shared<RegexpNode>(RegexpNode(flatten_node(re->sub()[0]))),
-                            make_shared<RegexpNode>(RegexpNode(Epsilon()))}); 
+                    return make_shared<RegexpNode>(RegexpNode(Alter({
+                                    flatten_node(re->sub()[0]),
+                                    epsilon_
+                                    }))); 
                 case re2::kRegexpAnyChar: // TODO: support for multibyte bytes
                 case re2::kRegexpAnyByte:
-                    return Byte(bytemap_range_);
+                    return make_shared<RegexpNode>(RegexpNode(
+                                Byte(bytemap_range_)));
                 case re2::kRegexpCharClass: { // TODO: support for runes larger than 128
                     std::unordered_set<ByteType> alters;
                     auto cc = re->cc();
@@ -299,13 +314,14 @@ namespace re2::FlatRegexp {
                         }
                     }
                     if (alters.size() == 1) {
-                        return Byte(*alters.begin());
+                        return make_shared<RegexpNode>(RegexpNode(
+                                    Byte(*alters.begin())));
                     } else {
                         vector<shared_ptr<RegexpNode>> bytes;
                         for (auto const &alter : alters) {
                             bytes.push_back(make_shared<RegexpNode>(RegexpNode(Byte(alter))));
                         }
-                        return Alter(bytes);
+                        return make_shared<RegexpNode>(RegexpNode(Alter(bytes)));
                     }
                 }
                 case re2::kRegexpCapture:
@@ -326,12 +342,13 @@ namespace re2::FlatRegexp {
             top_node_ = flatten_node(regexp_);
         }
 
+        shared_ptr<RegexpNode> epsilon_; // to avoid allocating memory for epsilon nodes
         re2::Regexp *regexp_;
         RE2::Options options_;
         re2::Prog *prog_;
         uint8_t *bytemap_;
         int bytemap_range_;
-        RegexpNode top_node_;
+        shared_ptr<RegexpNode> top_node_;
     };
 
 }
