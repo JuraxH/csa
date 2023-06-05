@@ -4,8 +4,7 @@
 #include "re2/flat_regexp.hh"
 
 
-namespace CA
-{
+namespace CA {
     using namespace re2::FlatRegexp;
     using std::vector;
     using std::visit;

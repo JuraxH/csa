@@ -16,17 +16,18 @@
 #include "re2/prog.h"
 
 
-namespace re2 {
 
 // TODO:
 //  anychar -- suport multibyte stuff (maybe more of builder thing)
 //
-namespace FlatRegexp {
+namespace re2::FlatRegexp {
 
     using namespace std::string_literals;
     using std::string;
     using std::to_string;
     using std::vector;
+    using std::shared_ptr;
+    using std::make_shared;
 
     using ByteType = uint8_t;
 
@@ -69,10 +70,10 @@ namespace FlatRegexp {
     template<typename T>
     class AlterType {
         public:
-        AlterType(vector<T>&& subs) : subs_(std::move(subs)) {}
-        AlterType(vector<T>& subs) : subs_(subs) {}
+        AlterType(vector<shared_ptr<T>>&& subs) : subs_(std::move(subs)) {}
+        AlterType(vector<shared_ptr<T>>& subs) : subs_(subs) {}
 
-        vector<T> const &subs() const { return subs_; }
+        vector<shared_ptr<T>> const &subs() const { return subs_; }
 
         string to_str() const { 
             string str{};
@@ -85,37 +86,38 @@ namespace FlatRegexp {
         }
 
         private:
-        std::vector<T> subs_;
+        std::vector<shared_ptr<T>> subs_;
     };
 
     template<typename T>
     class ConcatType {
         public:
-        ConcatType(vector<T>&& subs) : subs_(std::move(subs)) {}
-        ConcatType(vector<T>& subs) : subs_(subs) {}
+        ConcatType(vector<shared_ptr<T>>&& subs) : subs_(std::move(subs)) {}
+        ConcatType(vector<shared_ptr<T>>& subs) : subs_(subs) {}
 
-        vector<T> const &subs() const { return subs_; }
+        vector<shared_ptr<T>> const &subs() const { return subs_; }
 
         string to_str() const { 
             string str{};
             for (auto const &sub : subs_) {
-                visit([&](auto const &expr) { str += expr.to_str(); }, sub);
+                visit([&](auto const &expr) { str += expr.to_str(); }, *sub);
             }
             return str;
         }
 
         private:
-        std::vector<T> subs_;
+        std::vector<shared_ptr<T>> subs_;
     };
 
     template<typename T>
     class RepeatType {
         public:
-        RepeatType(T &&sub, int min, int max) : sub_(new T(std::move(sub))), min_(min), max_(max) { }
-        RepeatType(T &sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
-        RepeatType(T const &sub, int min, int max) : sub_(new T(sub)), min_(min), max_(max) { }
+        RepeatType(T &&sub, int min, int max) : sub_(make_shared<T>(std::move(sub))), min_(min), max_(max) { }
+        RepeatType(T &sub, int min, int max) : sub_(make_shared(sub)), min_(min), max_(max) { }
+        RepeatType(T const &sub, int min, int max) : sub_(make_shared(sub)), min_(min), max_(max) { }
+        RepeatType(shared_ptr<T> const &sub, int min, int max) : sub_(sub), min_(min), max_(max) { }
 
-        T const &sub() const { return *sub_; }
+        shared_ptr<T> const &sub() const { return sub_; }
         int min() const { return min_; }
         int max() const { return max_; }
 
@@ -137,11 +139,12 @@ namespace FlatRegexp {
     template<typename T>
     class PlusType {
         public:
-        PlusType(T &&sub) : sub_(new T(std::move(sub))) { }
-        PlusType(T &sub) : sub_(new T(sub)) { }
-        PlusType(T const &sub) : sub_(new T(sub)) { }
+        PlusType(T &&sub) : sub_(make_shared<T>(std::move(sub))) { }
+        PlusType(T &sub) : sub_(make_shared(sub)) { }
+        PlusType(T const &sub) : sub_(make_shared(sub)) { }
+        PlusType(shared_ptr<T> const &sub) : sub_(sub) { }
 
-        T const &sub() const { return *sub_; }
+        shared_ptr<T> const &sub() const { return sub_; }
 
         string to_str() const {
             string sub_str = visit([](auto const &expr) -> string
@@ -257,10 +260,10 @@ namespace FlatRegexp {
             return bytes;
         }
 
-        [[nodiscard]] vector<RegexpNode> flatten_subs(Regexp *re) {
-            vector<RegexpNode> subs(re->nsub());
+        [[nodiscard]] vector<shared_ptr<RegexpNode>> flatten_subs(Regexp *re) {
+            vector<shared_ptr<RegexpNode>> subs(re->nsub());
             for (auto i = 0; i < re->nsub(); i++) {
-                subs[i] = flatten_node(re->sub()[i]);
+                subs[i] = make_shared<RegexpNode>(RegexpNode(flatten_node(re->sub()[i])));
             }
             return subs;
         }
@@ -297,7 +300,8 @@ namespace FlatRegexp {
                 case re2::kRegexpPlus:
                     return Plus(flatten_node(re->sub()[0])); 
                 case re2::kRegexpQuest:
-                    return Alter({flatten_node(re->sub()[0]), Epsilon()}); 
+                    return Alter({make_shared<RegexpNode>(RegexpNode(flatten_node(re->sub()[0]))),
+                            make_shared<RegexpNode>(RegexpNode(Epsilon()))}); 
                 case re2::kRegexpAnyChar: // TODO: support for multibyte bytes
                 case re2::kRegexpAnyByte:
                     return Byte(bytemap_range_);
@@ -313,9 +317,9 @@ namespace FlatRegexp {
                     if (alters.size() == 1) {
                         return Byte(*alters.begin());
                     } else {
-                        vector<RegexpNode> bytes;
+                        vector<shared_ptr<RegexpNode>> bytes;
                         for (auto const &alter : alters) {
-                            bytes.push_back(Byte(alter));
+                            bytes.push_back(make_shared<RegexpNode>(RegexpNode(Byte(alter))));
                         }
                         return Alter(bytes);
                     }
@@ -348,4 +352,3 @@ namespace FlatRegexp {
 
 }
 
-}

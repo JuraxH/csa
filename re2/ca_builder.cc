@@ -29,9 +29,9 @@ namespace CA {
 
 [[nodiscard]] Fragment Builder::compute(Alter const &alter, CounterId cnt) {
     Fragment frag{{},{}, false};
-    for (RegexpNode const &sub : alter.subs()) {
+    for (auto const &sub : alter.subs()) {
         Fragment sub_frag = visit([this, cnt] (auto const & arg) {
-                return this->compute(arg, cnt); }, sub);
+                return this->compute(arg, cnt); }, *sub);
         if (sub_frag.nullable) {
             frag.nullable = true;
         }
@@ -51,7 +51,7 @@ namespace CA {
     auto const &subs = concat.subs();
     for (size_t i = 0; i < subs.size(); ++i) {
         Fragment sub_frag = visit([this, cnt] (auto const & arg) {
-                return this->compute(arg, cnt); }, subs[i]);
+                return this->compute(arg, cnt); }, *subs[i]);
         if (i != 0) {
             for (auto const& prev : frag.last) {
                 for (auto const& cur: sub_frag.first) {
@@ -82,7 +82,7 @@ namespace CA {
 [[nodiscard]] Fragment Builder::compute(Repeat const &repeat, CounterId cnt) {
     if (repeat.min() == 0 && repeat.max() == -1) { // no need for counting
         Fragment frag = visit([this, cnt] (auto const & arg) {
-                return this->compute(arg, cnt); }, repeat.sub());
+                return this->compute(arg, cnt); }, *repeat.sub());
         if (cnt == 0) {
             for (auto const& prev : frag.last) {
                 for (auto const& cur: frag.first) {
@@ -103,7 +103,7 @@ namespace CA {
         CounterId cnt_id = ca_.add_counter(Counter(repeat.min(), repeat.max()));
         Fragment frag = visit([this, cnt_id] (auto const & arg) {
                 return this->compute(arg, cnt_id); 
-                }, repeat.sub());
+                }, *repeat.sub());
         for (auto const& prev : frag.last) {
             for (auto const& cur: frag.first) {
                 add_transition_repeat(prev, cur);
@@ -119,7 +119,7 @@ namespace CA {
 [[nodiscard]] Fragment Builder::compute(Plus const &plus, CounterId cnt) {
     RegexpNode epxr = RegexpNode(Concat({ 
                 plus.sub(),
-                RegexpNode(Repeat(plus.sub(), 0, -1)) 
+                std::make_shared<RegexpNode>(RegexpNode(Repeat(plus.sub(), 0, -1)))
                 }));
     return visit([this, cnt] (auto const & arg) {
             return this->compute(arg, cnt);
