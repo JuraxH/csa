@@ -116,14 +116,4 @@ namespace CA {
     }
 }
 
-[[nodiscard]] Fragment Builder::compute(Plus const &plus, CounterId cnt) {
-    RegexpNode epxr = RegexpNode(Concat({ 
-                plus.sub(),
-                std::make_shared<RegexpNode>(RegexpNode(Repeat(plus.sub(), 0, -1)))
-                }));
-    return visit([this, cnt] (auto const & arg) {
-            return this->compute(arg, cnt);
-            }, epxr);
-}
-
 }

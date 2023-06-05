@@ -19,6 +19,7 @@
 
 // TODO:
 //  anychar -- suport multibyte stuff (maybe more of builder thing)
+//  using only one epsilon to save space
 //
 namespace re2::FlatRegexp {
 
@@ -135,31 +136,10 @@ namespace re2::FlatRegexp {
         int max_;
     };
 
-    // could be replaced with R(R){0,-1}, but that is done latter, to save memory
-    template<typename T>
-    class PlusType {
-        public:
-        PlusType(T &&sub) : sub_(make_shared<T>(std::move(sub))) { }
-        PlusType(T &sub) : sub_(make_shared(sub)) { }
-        PlusType(T const &sub) : sub_(make_shared(sub)) { }
-        PlusType(shared_ptr<T> const &sub) : sub_(sub) { }
-
-        shared_ptr<T> const &sub() const { return sub_; }
-
-        string to_str() const {
-            string sub_str = visit([](auto const &expr) -> string
-                    { return expr.to_str(); },
-                    *sub_);
-            return sub_str + "("s + sub_str + ")*"s;
-        }
-
-        private:
-        std::shared_ptr<T> sub_;
-    };
 
     // definition of recursive variant
     template<typename T>
-    using Var = std::variant<Epsilon, Byte, Bytes, AlterType<T>, ConcatType<T>, RepeatType<T>, PlusType<T>>;
+    using Var = std::variant<Epsilon, Byte, Bytes, AlterType<T>, ConcatType<T>, RepeatType<T>>;
 
     // fixpoint combinator
     template<template<typename> typename K>
@@ -173,7 +153,6 @@ namespace re2::FlatRegexp {
     using Concat = ConcatType<RegexpNode>;
     using Alter = AlterType<RegexpNode>;
     using Repeat = RepeatType<RegexpNode>;
-    using Plus = PlusType<RegexpNode>;
 
     class FlatRegexp {
         public:
@@ -297,8 +276,13 @@ namespace re2::FlatRegexp {
                     return Repeat(flatten_node(re->sub()[0]), 0, -1);
                 case re2::kRegexpRepeat:
                     return Repeat(flatten_node(re->sub()[0]), re->min(), re->max());
-                case re2::kRegexpPlus:
-                    return Plus(flatten_node(re->sub()[0])); 
+                case re2::kRegexpPlus: {
+                    shared_ptr<RegexpNode> sub = make_shared<RegexpNode>(flatten_node(re->sub()[0]));
+                    return Concat({
+                            sub,
+                            make_shared<RegexpNode>(RegexpNode(Repeat(sub, 0, -1)))
+                            }); 
+                }
                 case re2::kRegexpQuest:
                     return Alter({make_shared<RegexpNode>(RegexpNode(flatten_node(re->sub()[0]))),
                             make_shared<RegexpNode>(RegexpNode(Epsilon()))}); 

@@ -153,7 +153,6 @@ namespace CA {
         [[nodiscard]] Fragment compute(Alter const &alter, CounterId cnt);
         [[nodiscard]] Fragment compute(Concat const &concat, CounterId cnt);
         [[nodiscard]] Fragment compute(Repeat const &repeat, CounterId cnt);
-        [[nodiscard]] Fragment compute(Plus const &plus, CounterId cnt);
 
         Builder(string const &pattern) : flat_(pattern), ca_(),
         map_to_state(flat_.bytemap_range() + 1, vector<StateId>{}) { 
