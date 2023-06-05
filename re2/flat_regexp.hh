@@ -35,6 +35,11 @@ namespace re2::FlatRegexp {
     class Epsilon {
         public:
         string to_str() const { return ""s; }
+
+        unsigned to_DOT(unsigned id, string & str) const { 
+            str += to_string(id) + "[label=\"Epsilon\"]\n";
+            return id + 1;
+        }
     };
 
     class Byte {
@@ -43,6 +48,11 @@ namespace re2::FlatRegexp {
         
         ByteType byte() const { return byte_; }
         string to_str() const { return to_string(byte_); }
+
+        unsigned to_DOT(unsigned id, string & str) const { 
+            str += to_string(id) + "[label=\"Byte:"s + to_str() + "\"]\n";
+            return id + 1;
+        }
 
         private:
         ByteType byte_;
@@ -61,6 +71,12 @@ namespace re2::FlatRegexp {
                 str += to_string(s);
             }
             return str;
+        }
+
+        unsigned to_DOT(unsigned id, string & str) const { 
+            str += to_string(id) + "[label=\"Bytes:"s + to_str()
+                + "\"]\n";
+            return id + 1;
         }
 
         private:
@@ -85,6 +101,20 @@ namespace re2::FlatRegexp {
             return str;
         }
 
+        unsigned to_DOT(unsigned id, string & str) const { 
+            str += to_string(id) + "[label=\"Alter\"]\n";
+            unsigned sub_id = id + 1;
+            unsigned next_id = sub_id;
+            for (auto const& sub : subs_) {
+                next_id = visit([&] (auto const& var) {
+                        return var.to_DOT(sub_id, str); },
+                        *sub);
+                str += to_string(id) + " -> "s + to_string(sub_id) + "\n"s;
+                sub_id = next_id;
+            }
+            return next_id;
+        }
+
         private:
         std::vector<shared_ptr<T>> subs_;
     };
@@ -103,6 +133,20 @@ namespace re2::FlatRegexp {
                 visit([&](auto const &expr) { str += expr.to_str(); }, *sub);
             }
             return str;
+        }
+
+        unsigned to_DOT(unsigned id, string & str) const { 
+            str += to_string(id) + "[label=\"Concat\"]\n";
+            unsigned sub_id = id + 1;
+            unsigned next_id = sub_id;
+            for (auto const& sub : subs_) {
+                next_id = visit([&] (auto const& var) { 
+                        return var.to_DOT(sub_id, str); },
+                        *sub);
+                str += to_string(id) + " -> "s + to_string(sub_id) + "\n"s;
+                sub_id = next_id;
+            }
+            return next_id;
         }
 
         private:
@@ -127,6 +171,17 @@ namespace re2::FlatRegexp {
                     *sub_);
             return "("s + sub_str + "){"s + to_string(min_) 
                 + ","s + to_string(max_) + "}"s;
+        }
+
+        unsigned to_DOT(unsigned id, string & str) const { 
+            str += to_string(id) + "[label=\"Repeat{"s + to_string(min_)
+                + ","s + to_string(max_) + "}\"]\n";
+            unsigned sub_id = id + 1;
+            unsigned next_id = visit([&] (auto const& var) { 
+                    return var.to_DOT(sub_id, str); },
+                    *sub_);
+            str += to_string(id) + " -> "s + to_string(sub_id) + "\n"s;
+            return next_id;
         }
 
         private:
@@ -175,6 +230,7 @@ namespace re2::FlatRegexp {
             bytemap_ = prog_->bytemap();
 
             flatten();
+            std::cerr << to_DOT();
         }
 
         FlatRegexp(FlatRegexp && other) : epsilon_(other.epsilon_),
@@ -225,7 +281,14 @@ namespace re2::FlatRegexp {
         [[nodiscard]] int bytemap_range() const { return bytemap_range_; }
         [[nodiscard]] uint8_t const* bytemap() const { return bytemap_; }
 
+        [[nodiscard]] string to_DOT() const { 
+            string str = "digraph FlatRegexp {\n"s;
+            visit([&] (auto const& var) { var.to_DOT(0, str); }, *top_node_);
+            return str + "}\n"s;
+        }
+
         private:
+        [[nodiscard]] shared_ptr<RegexpNode> cc_to_regexp_node(CharClass *cc);
         [[nodiscard]] ByteType byte_to_symbol(uint8_t byte) {
             return bytemap_[byte];
         }
@@ -304,26 +367,8 @@ namespace re2::FlatRegexp {
                 case re2::kRegexpAnyByte:
                     return make_shared<RegexpNode>(RegexpNode(
                                 Byte(bytemap_range_)));
-                case re2::kRegexpCharClass: { // TODO: support for runes larger than 128
-                    std::unordered_set<ByteType> alters;
-                    auto cc = re->cc();
-                    for (auto range = cc->begin(); range != cc->end(); ++range) {
-                        assert(range->lo <= 128 && range->hi <= 128); // only ascii ranges for now
-                        for (auto i = range->lo; i <= range->hi; i++) {
-                            alters.insert(byte_to_symbol(i));
-                        }
-                    }
-                    if (alters.size() == 1) {
-                        return make_shared<RegexpNode>(RegexpNode(
-                                    Byte(*alters.begin())));
-                    } else {
-                        vector<shared_ptr<RegexpNode>> bytes;
-                        for (auto const &alter : alters) {
-                            bytes.push_back(make_shared<RegexpNode>(RegexpNode(Byte(alter))));
-                        }
-                        return make_shared<RegexpNode>(RegexpNode(Alter(bytes)));
-                    }
-                }
+                case re2::kRegexpCharClass:
+                    return cc_to_regexp_node(re->cc());
                 case re2::kRegexpCapture:
                     return flatten_node(re->sub()[0]);
                 case re2::kRegexpBeginLine:
