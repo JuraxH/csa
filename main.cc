@@ -28,6 +28,5 @@ int main(int argc, char **argv) {
     }
     //auto b = Builder("[^©-®]");
     auto b = Builder::get_ca(argv[1]);
-    cout << b.to_string() << "\n"s;
     cout << b.to_DOT() << "\n"s;
 }

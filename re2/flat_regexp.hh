@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_set>
+#include <unordered_map>
 #include <algorithm>
 #include <iostream>
 #include <limits>
@@ -208,9 +209,77 @@ namespace re2::FlatRegexp {
     using Alter = AlterType<RegexpNode>;
     using Repeat = RepeatType<RegexpNode>;
 
+    class ByteRange {
+        public:
+        ByteRange(uint8_t min, uint8_t max) : min_(min), max_(max) {}
+
+        uint8_t min() const { return min_; }
+        uint8_t max() const { return max_; }
+
+        bool operator==(ByteRange const& other) const {
+            return min_ == other.min_ && max_ == other.max_;
+        }
+
+        bool operator!=(ByteRange const& other) const {
+            return !(*this == other);
+        }
+        private:
+        uint8_t min_;
+        uint8_t max_;
+    };
+
+    class ByteRangeSeq {
+        public:
+        ByteRangeSeq(vector<ByteRange> seq) : seq_(std::move(seq)) {
+            assert(seq_.size() > 0 && seq_.size() <= 4);
+        }
+
+        vector<ByteRange> const& seq() const { return seq_; }
+
+        bool last() const { return seq_.size() == 1; }
+        ByteRangeSeq suffix() const {
+            assert(seq_.size() >= 2);
+            return ByteRangeSeq(vector<ByteRange>(seq_.begin()+1, seq_.end()));
+        }
+
+        bool operator==(ByteRangeSeq const& other) const {
+            return seq_ == other.seq_;
+        }
+        private:
+        vector<ByteRange> seq_;
+    };
+
+    // from boost:
+    // https://www.boost.org/doc/libs/1_35_0/doc/html/boost/hash_combine_id241013.html
+    // license: https://www.boost.org/LICENSE_1_0.txt
+    template<typename T> static void hash_combine(size_t &seed, T const &val) {
+        seed ^= std::hash<T>()(val) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+    }
+
+}
+
+namespace std {
+    template<>
+    struct hash<re2::FlatRegexp::ByteRangeSeq> {
+        typedef re2::FlatRegexp::ByteRangeSeq argument_type;
+        typedef size_t result_type;
+
+        result_type operator()(argument_type const& byte_range_seq) const {
+            result_type seed = 0;
+            for (auto const &range : byte_range_seq.seq()) {
+                re2::FlatRegexp::hash_combine(seed, range.min());
+                re2::FlatRegexp::hash_combine(seed, range.max());
+            }
+            return seed;
+        }
+    };
+}
+
+namespace re2::FlatRegexp {
+
     class FlatRegexp {
         public:
-        FlatRegexp(string const &pattern) :
+        FlatRegexp(string const &pattern) : suffix_cache_(),
         epsilon_(make_shared<RegexpNode>(RegexpNode(Epsilon()))),
         regexp_(nullptr), options_(), prog_(nullptr), bytemap_(nullptr),
         bytemap_range_(), top_node_() {
@@ -230,12 +299,14 @@ namespace re2::FlatRegexp {
             bytemap_ = prog_->bytemap();
 
             flatten();
+            std::cerr << bytemap_to_str();
             std::cerr << to_DOT();
         }
 
-        FlatRegexp(FlatRegexp && other) : epsilon_(other.epsilon_),
-        regexp_(other.regexp_), options_(other.options_), prog_(other.prog_),
-        bytemap_(other.bytemap_), bytemap_range_(other.bytemap_range_),
+        FlatRegexp(FlatRegexp && other) : suffix_cache_(other.suffix_cache_),
+        epsilon_(other.epsilon_), regexp_(other.regexp_),
+        options_(other.options_), prog_(other.prog_), bytemap_(other.bytemap_),
+        bytemap_range_(other.bytemap_range_),
         top_node_(std::move(other.top_node_)) {
             other.bytemap_ = nullptr;
             other.regexp_ = nullptr;
@@ -287,7 +358,26 @@ namespace re2::FlatRegexp {
             return str + "}\n"s;
         }
 
+        [[nodiscard]] string bytemap_to_str() const {
+            string str = "Bytemap {\n"s;
+            for (size_t i = 0; i < 256; ++i) {
+                if (static_cast<size_t>('!') <= i && static_cast<size_t>('~') >= i) {
+                    str += to_string(i) + " ["s + static_cast<char>(i) + "]"
+                        + " -> "s + to_string(bytemap_[i]) + "\n"s;
+                } else {
+                    str += to_string(i) + " -> "s + to_string(bytemap_[i]) + "\n"s;
+                }
+            }
+            return str;
+        }
+
         private:
+        shared_ptr<RegexpNode> byte_range_seq_to_node(ByteRangeSeq seq);
+        shared_ptr<RegexpNode> rune_to_bytes(int rune);
+        void add_rune2(vector<shared_ptr<RegexpNode>> &alters, uint32_t min, uint32_t max);
+        void add_rune3(vector<shared_ptr<RegexpNode>> &alters, uint32_t min, uint32_t max);
+        void add_rune4(vector<shared_ptr<RegexpNode>> &alters, uint32_t min, uint32_t max);
+
         [[nodiscard]] shared_ptr<RegexpNode> cc_to_regexp_node(CharClass *cc);
         [[nodiscard]] ByteType byte_to_symbol(uint8_t byte) {
             return bytemap_[byte];
@@ -387,6 +477,7 @@ namespace re2::FlatRegexp {
             top_node_ = flatten_node(regexp_);
         }
 
+        std::unordered_map<ByteRangeSeq, shared_ptr<RegexpNode>> suffix_cache_;
         shared_ptr<RegexpNode> epsilon_; // to avoid allocating memory for epsilon nodes
         re2::Regexp *regexp_;
         RE2::Options options_;
