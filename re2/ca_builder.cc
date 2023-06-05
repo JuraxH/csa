@@ -68,7 +68,7 @@ namespace CA {
                 frag.nullable = false;
             }
         }
-        if (frag.nullable) {
+        if (sub_frag.nullable) {
             frag.last.reserve(frag.last.size() + sub_frag.last.size());
             std::move(sub_frag.last.begin(), sub_frag.last.end(),
                     std::inserter(frag.last, frag.last.end()));
@@ -96,6 +96,7 @@ namespace CA {
                 }
             }
         }
+        frag.nullable = true;
         return frag;
     } else {
         assert(cnt == 0); // cannot have nested counters

@@ -63,14 +63,24 @@ namespace CA
                             t.byte(), t_id, Guard::True, Operator::Noop});
                 } else {
                     origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::True, Operator::Rst});
+                }
+            } else if (target.cnt() == NoCounter) {
+                if (ca_.get_counter(origin.cnt()).min() == 0) {
+                    origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::True, Operator::Noop});
+                } else {
+                    origin.add_transition(Transition{
                             t.byte(), t_id, Guard::CanExit, Operator::Noop});
                 }
-            } else if (origin.cnt() == NoCounter) {
-                origin.add_transition(Transition{
-                        t.byte(), t_id, Guard::True, Operator::Rst});
             } else if (origin.cnt() != target.cnt()) {
-                origin.add_transition(Transition{
-                        t.byte(), t_id, Guard::CanExit, Operator::Rst});
+                if (ca_.get_counter(origin.cnt()).min() == 0) {
+                    origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::True, Operator::Rst});
+                } else {
+                    origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::CanExit, Operator::Rst});
+                }
             } else {
                 origin.add_transition(Transition{
                         t.byte(), t_id, Guard::True, Operator::ID});
@@ -89,14 +99,24 @@ namespace CA
                             t.byte(), t_id, Guard::True, Operator::Noop});
                 } else {
                     origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::True, Operator::Rst});
+                }
+            } else if (target.cnt() == NoCounter) {
+                if (ca_.get_counter(origin.cnt()).min() == 0) {
+                    origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::True, Operator::Noop});
+                } else {
+                    origin.add_transition(Transition{
                             t.byte(), t_id, Guard::CanExit, Operator::Noop});
                 }
-            } else if (origin.cnt() == NoCounter) {
-                origin.add_transition(Transition{
-                        t.byte(), t_id, Guard::True, Operator::Rst});
             } else {
-                origin.add_transition(Transition{
-                        t.byte(), t_id, Guard::CanExit, Operator::Rst});
+                if (ca_.get_counter(origin.cnt()).min() == 0) {
+                    origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::True, Operator::Rst});
+                } else {
+                    origin.add_transition(Transition{
+                            t.byte(), t_id, Guard::CanExit, Operator::Rst});
+                }
             }
         }
 
@@ -105,8 +125,13 @@ namespace CA
             auto o_id = ub_to_sid(o);
             auto t_id = ub_to_sid(t);
             auto &origin = ca_.get_state(o_id);
-            origin.add_transition(Transition{
-                    t.byte(), t_id, Guard::CanIncr, Operator::Incr});
+            if (ca_.get_counter(origin.cnt()).max() == - 1) {
+                origin.add_transition(Transition{
+                        t.byte(), t_id, Guard::True, Operator::Incr});
+            } else {
+                origin.add_transition(Transition{
+                        t.byte(), t_id, Guard::CanIncr, Operator::Incr});
+            }
         }
 
         // used to generate transition from the initial state to first(R)
