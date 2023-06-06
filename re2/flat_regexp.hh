@@ -234,6 +234,13 @@ namespace re2::FlatRegexp {
             assert(seq_.size() > 0 && seq_.size() <= 4);
         }
 
+        ByteRangeSeq& pad_to_size(size_t size) {
+            while (seq_.size() < size) {
+                seq_.push_back(ByteRange(0x80, 0xBF)); // padding by CHARX
+            }
+            return *this;
+        }
+
         vector<ByteRange> const& seq() const { return seq_; }
 
         bool last() const { return seq_.size() == 1; }
