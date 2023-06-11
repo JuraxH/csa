@@ -104,26 +104,6 @@ shared_ptr<RegexpNode> FlatRegexp::rune_to_bytes(int rune) {
 
 
 
-void FlatRegexp::bounded_int_seq(vector<shared_ptr<RegexpNode>> &alters,
-        int min, int max) {
-    char min_str[re2::UTFmax];
-    char max_str[re2::UTFmax];
-    int len =runetochar(min_str, &min);
-    runetochar(max_str, &max);
-    uint8_t diff_byte = 0;
-    for (; diff_byte < len; ++diff_byte) {
-        if (min_str[diff_byte] != max_str[diff_byte]) {
-            break;
-        }
-    }
-    int i = 0;
-    while (i < len) {
-        if (min_str[i] == max_str[i]) {
-        }
-    }
-    if (diff_byte == 0) {
-    }
-}
 
 
 void FlatRegexp::add_rune2(vector<shared_ptr<RegexpNode>> &alters, uint32_t min,
@@ -139,7 +119,6 @@ void FlatRegexp::add_rune2(vector<shared_ptr<RegexpNode>> &alters, uint32_t min,
         alters.push_back(rune_to_bytes((int)min));
         return;
     } 
-    bounded_int_seq(alters, (int)min, (int)max);
 }
 
 void FlatRegexp::add_rune3(vector<shared_ptr<RegexpNode>> &alters, uint32_t min,
