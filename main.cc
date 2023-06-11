@@ -1,8 +1,8 @@
 #include <iostream>
-//#include "re2/re2.h"
-//#include "re2/regexp.h"
+
 #include "re2/ca.hh"
 #include "re2/ca_builder.hh"
+#include "re2/glushkov.hh"
 #include "util/utf.h"
 
 
@@ -27,6 +27,6 @@ int main(int argc, char **argv) {
         return 1;
     }
     //auto b = Builder("[^©-®]");
-    auto b = Builder::get_ca(argv[1]);
+    auto b = glushkov::Builder::get_ca(argv[1]);
     cout << b.to_DOT() << "\n"s;
 }
