@@ -15,6 +15,7 @@ namespace re2::regex {
         public:
         Regex(std::string_view pattern) : regexp_(nullptr), options_(), prog_(),
         bytemap_(nullptr), bytemap_range_(0) {
+            options_.set_dot_nl();
             regexp_ = re2::Regexp::Parse(pattern, 
                     static_cast<re2::Regexp::ParseFlags>(options_.ParseFlags()), 
                     nullptr);

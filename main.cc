@@ -27,8 +27,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     //auto b = Builder("[^©-®]");
-    //auto b = glushkov::Builder::get_ca(argv[1]);
-    auto b = glushkov::Builder::get_ca("[©®]");
+    auto b = glushkov::Builder::get_ca(argv[1]);
+    //auto b = glushkov::Builder::get_ca("[©®]");
     cout << b.to_DOT() << "\n"s;
     //auto b = re2::range_builder::Builder();
     //b.prepare(100);

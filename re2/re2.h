@@ -355,6 +355,9 @@ class RE2 {
 
     int ParseFlags() const;
 
+    // for CA construction
+    void set_dot_nl() { dot_nl_ = true; }
+
    private:
     Encoding encoding_;
     bool posix_syntax_;
