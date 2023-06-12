@@ -1,7 +1,14 @@
 #include "re2/glushkov.hh"
+#include "glushkov.hh"
+#include <algorithm>
+#include <cstdint>
+#include <unordered_set>
+#include <vector>
 
 namespace CA::glushkov {
-    Builder::Builder(std::string_view pattern) : regex_(re2::regex::Regex(pattern)), ca_() {
+
+    Builder::Builder(std::string_view pattern) 
+        : regex_(re2::regex::Regex(pattern)), ca_(), range_builder_(), range_states_() {
         ca_.set_bytemap(regex_.bytemap());
         ca_.set_bytemap_range(regex_.bytemap_range());
 
@@ -110,6 +117,98 @@ namespace CA::glushkov {
                     symbol, t_id, Guard::True, Operator::Rst});
         }
     }
+
+    Fragment Builder::get_range_frag(CounterId cnt) {
+        auto const& ranges = range_builder_.ranges();
+        auto const& root = range_builder_.root();
+        range_states_.resize(ranges.size());
+        std::fill(range_states_.begin(), range_states_.end(), 0);
+        range_states_[0] = ca_.add_state(cnt); // the last state
+        Fragment frag = {{}, {range_states_[0]}, false};
+
+        std::unordered_set<uint8_t> ascii_byte_classes;
+        std::vector<uint8_t> byte_classes;
+        std::vector<uint32_t> stack; // for traversing the inner states
+        for (auto id : root) { // iterating over the first ranges
+            auto const& range = ranges[id];
+            if (range.hi < 0x80) {
+                for (uint8_t i = range.lo; i <= range.hi; ++i) {
+                    ascii_byte_classes.insert(ca_.get_byte_class(i));
+                }
+            } else {
+                byte_classes.clear();
+                for (uint8_t i = range.lo; i <= range.hi; ++i) {
+                    auto c = ca_.get_byte_class(i);
+                    if (std::find(byte_classes.begin(), byte_classes.end(), c)
+                            == byte_classes.end()) {
+                      byte_classes.push_back(c);
+                    }
+                }
+                for (auto next : range.next) {
+                    auto s = range_states_[next];
+                    if (s == 0) {
+                        s = ca_.add_state(cnt);
+                        range_states_[next] = s;
+                        stack.push_back(next);
+                    }
+                    for (auto c : byte_classes) {
+                        frag.first.push_back(FirstState{s, c});
+                    }
+                }
+            }
+        }
+
+        while (!stack.empty()) { // iterating over the inner ranges
+            int id = stack.back();
+            stack.pop_back();
+            auto const& range = ranges[id];
+            byte_classes.clear();
+            for (uint8_t i = range.lo; i <= range.hi; ++i) {
+                auto c = ca_.get_byte_class(i);
+                if (std::find(byte_classes.begin(), byte_classes.end(), c)
+                        == byte_classes.end()) {
+                    byte_classes.push_back(c);
+                }
+            }
+            for (auto next : range.next) {
+                auto s = range_states_[next];
+                if (s == 0) {
+                    s = ca_.add_state(cnt);
+                    range_states_[next] = s;
+                    stack.push_back(next);
+                }
+                for (auto c : byte_classes) {
+                    add_transition(range_states_[id], s, c);
+                }
+            }
+        }
+
+        for (auto c : ascii_byte_classes) { // finaly adding the ascii bytes
+            frag.first.push_back(FirstState{range_states_[0], c});
+        }
+
+        return frag;
+    }
+
+    Fragment Builder::any_char_frag(CounterId cnt) {
+        if (!range_builder_.prepare(static_cast<uint64_t>(re2::kRegexpAnyChar))) {
+            range_builder_.add_rune_range(0, 0x10FFFF);
+        }
+        return get_range_frag(cnt);
+    }
+
+
+    Fragment Builder::char_class_frag(re2::Regexp *re, CounterId cnt) {
+        auto cc = re->cc();
+        if (!range_builder_.prepare(reinterpret_cast<uint64_t>(re))) {
+            for (auto it = cc->begin(); it != cc->end(); ++it) {
+                range_builder_.add_rune_range(it->lo, it->hi);
+            }
+        }
+        return get_range_frag(cnt);
+
+    }
+
 
     Fragment Builder::lit_frag(re2::Regexp *re, CounterId cnt) {
         char chars[re2::UTFmax];
@@ -310,13 +409,11 @@ namespace CA::glushkov {
             case re2::kRegexpQuest:
                 return quest_frag(re, cnt);
             case re2::kRegexpAnyChar: // TODO: support for multibyte bytes
-                throw std::runtime_error("Use of unimplemented RegexpOp: "s
-                        + std::to_string(re->op()) + " in get_eq()"s);
+                return any_char_frag(cnt);
             case re2::kRegexpAnyByte:
                 return any_byte_frag(cnt);
             case re2::kRegexpCharClass:
-                throw std::runtime_error("Use of unimplemented RegexpOp: "s
-                        + std::to_string(re->op()) + " in get_eq()"s);
+                return char_class_frag(re, cnt);
             case re2::kRegexpCapture:
                 return compute_fragment(re->sub()[0], cnt);
             case re2::kRegexpBeginLine:

@@ -1,12 +1,17 @@
 #pragma once
 
-#include "ca.hh"
-#include "re2/regex.hh"
-#include "re2/ca.hh"
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <iostream>
 #include <vector>
+#include <unordered_map>
+
+#include "ca.hh"
+#include "re2/regex.hh"
+#include "re2/ca.hh"
+#include "re2/range_builder.hh"
+
 
 
 namespace CA::glushkov {
@@ -39,6 +44,8 @@ namespace CA::glushkov {
         void add_transition_init(State &init, StateId t_id, Symbol symbol);
         // interface to compute fragment of any regexp
         Fragment compute_fragment(re2::Regexp *re, CounterId cnt);
+        
+        Fragment get_range_frag(CounterId cnt);
 
         // concrete implementattions for each type of regexp
         Fragment lit_frag(re2::Regexp *re, CounterId cnt);
@@ -50,7 +57,9 @@ namespace CA::glushkov {
         Fragment plus_frag(re2::Regexp *re, CounterId cnt);
         Fragment quest_frag(re2::Regexp *re, CounterId cnt);
         Fragment any_byte_frag(CounterId cnt);
+        Fragment any_char_frag(CounterId cnt);
         Fragment repeat_frag(re2::Regexp *re, CounterId cnt);
+        Fragment char_class_frag(re2::Regexp *re, CounterId cnt);
 
         CA ca() { return std::move(ca_); }
         Builder(std::string_view pattern);
@@ -58,5 +67,7 @@ namespace CA::glushkov {
 
         re2::regex::Regex regex_;
         CA ca_;
+        re2::range_builder::Builder range_builder_;
+        std::vector<StateId> range_states_; // used by charclass construction
     };
 } // namespace CA::glushkov

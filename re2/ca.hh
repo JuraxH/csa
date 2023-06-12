@@ -221,6 +221,19 @@ namespace CA {
             }
         }
 
+        [[nodiscard]] string bytemap_to_str() const {
+            string str = "Bytemap {\n"s;
+            for (size_t i = 0; i < 256; ++i) {
+                if (static_cast<size_t>('!') <= i && static_cast<size_t>('~') >= i) {
+                    str += std::to_string(i) + " ["s + static_cast<char>(i) + "]"
+                        + " -> "s + std::to_string(bytemap_[i]) + "\n"s;
+                } else {
+                    str += std::to_string(i) + " -> "s + std::to_string(bytemap_[i]) + "\n"s;
+                }
+            }
+            return str;
+        }
+
         [[nodiscard]] string to_string() const {
             string str{};
             str += "CA {\n\tCounters:\n"s;
