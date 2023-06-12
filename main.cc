@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "re2/ca.hh"
-#include "re2/ca_builder.hh"
 #include "re2/glushkov.hh"
 #include "util/utf.h"
 #include "re2/range_builder.hh"
