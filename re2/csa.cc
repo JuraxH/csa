@@ -1,15 +1,12 @@
 #include "re2/csa.hh"
-#include "re2/ca_builder.hh"
+#include "re2/glushkov.hh"
 
 namespace CSA {
 
 using namespace std;
 
-CSA::CSA(string const& pattern) : ca(CA::Builder::get_ca(pattern)), 
-    configs({make_pair(InitConfig, vector<Trans>(ca.bytemap_range())), }), counter_buffer() { 
-        cerr << ca.to_string() << endl;
-        cerr << ca.to_DOT() << endl;
-    }
+CSA::CSA(string const& pattern) : ca(CA::glushkov::Builder::get_ca(pattern)), 
+    configs({make_pair(InitConfig, vector<Trans>(ca.bytemap_range())), }), counter_buffer() { }
 
 bool CSA::match(const std::string& text) {
     CachedConfig *cur = &(*configs.find(InitConfig));

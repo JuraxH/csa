@@ -16,13 +16,13 @@ int main(int argc, char **argv) {
     if (argv[1][0] == '^') {
         pattern = string("(?:") +  string((char *)&(argv[1][1]));
     } else {
-        pattern = string(".*(?:") + string(argv[1]);
+        pattern = string("\\C*(?:") + string(argv[1]);
     }
     if (pattern.back() == '$') {
         pattern.pop_back();
         pattern = pattern + string(")");
     } else {
-        pattern = pattern + string(").*");
+        pattern = pattern + string(")\\C*");
     }
 
     CSA::CSA csa{pattern};
