@@ -8,7 +8,8 @@
 namespace CA::glushkov {
 
     Builder::Builder(std::string_view pattern) 
-        : regex_(re2::regex::Regex(pattern)), ca_(), range_builder_(), range_states_() {
+        : regex_(re2::regex::Regex(pattern)), ca_(), range_builder_(),
+        range_states_() {
         ca_.set_bytemap(regex_.bytemap());
         ca_.set_bytemap_range(regex_.bytemap_range());
 
@@ -123,6 +124,7 @@ namespace CA::glushkov {
         auto const& root = range_builder_.root();
         range_states_.resize(ranges.size());
         std::fill(range_states_.begin(), range_states_.end(), 0);
+
         range_states_[0] = ca_.add_state(cnt); // the last state
         Fragment frag = {{}, {range_states_[0]}, false};
 
@@ -144,7 +146,10 @@ namespace CA::glushkov {
                       byte_classes.push_back(c);
                     }
                 }
-                for (auto next : range.next) {
+                // TODO: here i could probaly use the same state for all
+                // successors, but i am not sure if there could be any 
+                // cached states that would be already created
+                for (auto next : range.next) { 
                     auto s = range_states_[next];
                     if (s == 0) {
                         s = ca_.add_state(cnt);
