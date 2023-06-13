@@ -374,6 +374,9 @@ namespace CA::glushkov {
             }
             CounterId new_cnt = ca_.add_counter(Counter(re->min(), re->max()));
             Fragment frag = compute_fragment(re->sub()[0], new_cnt);
+            if (frag.nullable) {
+                ca_.get_counter(new_cnt).set_min(0);
+            }
             for (auto const& prev: frag.last) {
                 for (auto const& cur: frag.first) {
                     add_transition_repeat(prev, cur.state, cur.byte_class);

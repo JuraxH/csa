@@ -4,6 +4,8 @@
 #include <string>
 #include <cassert>
 
+#include <iostream>
+
 namespace CA {
 
     using namespace std::string_literals;
@@ -25,6 +27,10 @@ namespace CA {
 
         [[nodiscard]] T min() const { return min_; }
         [[nodiscard]] T max() const { return max_; }
+
+        void set_min(T min) { 
+            std::cerr << "pre set min: " << min_ << std::endl;
+            min_ = min; }
 
         [[nodiscard]] bool can_incr(unsigned val) const {
             return max_ == -1 || static_cast<unsigned>(max_) > val;
