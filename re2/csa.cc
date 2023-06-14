@@ -1,4 +1,5 @@
 #include "re2/csa.hh"
+#include "ca.hh"
 #include "re2/glushkov.hh"
 
 namespace CSA {
@@ -177,6 +178,7 @@ void CSA::compute_trans(Trans &trans, CachedConfig *cur, int byte_class) {
                         || ca_trans.symbol() == byte_class) {
                     switch(ca_trans.grd()) {
                         case CA::Guard::CanIncr:
+                            assert(ca_trans.op() == CA::Operator::Incr);
                             if (can_incr_index == -1) {
                                 guards.push_back(Guard{state.state(), CA::Guard::CanIncr});
                                 can_incr_index = index;
@@ -206,7 +208,7 @@ void CSA::compute_trans(Trans &trans, CachedConfig *cur, int byte_class) {
                                 guarded_states.push_back({});
                             } 
                             switch (ca_trans.op()) {
-                                case CA::Operator::ID:
+                                case CA::Operator::Noop:
                                     guarded_states[can_exit_index].push_back(ca_trans.target());
                                     break;
                                 case CA::Operator::Rst:
