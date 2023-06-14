@@ -37,7 +37,7 @@ build/main: build/main.o $(RE2_OBJ) $(UTIL_OBJ)
 	g++ $(LDFLAGS) $^ $(LIBS) -o $@
 
 build/csa_bench: build/csa_bench.o $(RE2_OBJ) $(UTIL_OBJ)
-	g++ $(LDFLAGS) $^ $(LIBS) -o $@
+	g++ -static $(LDFLAGS) $^ $(LIBS) -o $@
 
 clean:
 	rm build/*
