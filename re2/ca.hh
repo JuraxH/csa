@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 #include <string>
 #include <cassert>
@@ -108,10 +109,10 @@ namespace CA {
             return str + "}";
         }
 
-        [[nodiscard]] string to_DOT() const {
+        [[nodiscard]] string to_DOT(std::function<std::string(SymbolT)> s_to_str) const {
             string str{};
             str += std::to_string(target_) + "[label=\""s 
-                + std::to_string(symbol_) + "|G:"s
+                + s_to_str(symbol_) + "|G:"s
                 + guard_to_string(grd_)
                 + "|O:"
                 + operator_to_string(op_);
@@ -159,14 +160,14 @@ namespace CA {
                 return str + indent + "}"s;
             }
 
-            [[nodiscard]] string to_DOT(StateId id) const {
+            [[nodiscard]] string to_DOT(StateId id, std::function<std::string(SymbolT)> s_to_str) const {
                 string str{};
                 string str_id = std::to_string(id);
                 str += str_id + "[label=\""s + str_id + "|"s 
                     + guard_to_string(final_) + "|C:"s 
                     + std::to_string(cnt_) + "\"]\n"s;
                 for (auto const &t : transitions_) {
-                    str += str_id + " -> " + t.to_DOT() + "\n";
+                    str += str_id + " -> " + t.to_DOT(s_to_str) + "\n";
                 }
                 return str;
             }
@@ -259,10 +260,10 @@ namespace CA {
             return str + "}"s;
         }
 
-        [[nodiscard]] string to_DOT() const {
+        [[nodiscard]] string to_DOT(std::function<std::string(SymbolT)> s_to_str) const {
             string str{"digraph CA {\n"s};
             for (size_t i = 0; i < states_.size(); i++) {
-                str += states_[i].to_DOT(i);
+                str += states_[i].to_DOT(i, s_to_str);
             }
             return str + "}\n"s;
         }
