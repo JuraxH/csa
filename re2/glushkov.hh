@@ -16,9 +16,14 @@
 
 namespace CA::glushkov {
 
+    using Symbol = uint8_t;
+    using CA = CA<Symbol>;
+    using State = StateT<Symbol>;
+    using Transition = TransitionT<Symbol>;
+
     struct FirstState {
         StateId state;
-        uint8_t byte_class;
+        Symbol byte_class;
     };
 
     struct Fragment {

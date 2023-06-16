@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <list>
 #include <iostream>
 #include <unordered_map>
@@ -468,7 +469,7 @@ class CSA {
     using ConfigCache = std::unordered_map<
             Config, std::vector<Trans>, ConfigHasher>;
 
-    CA::CA ca;
+    CA::CA<uint8_t> ca;
     ConfigCache configs;
     CounterBuffer counter_buffer;
 

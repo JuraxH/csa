@@ -147,12 +147,12 @@ void CSA::compute_trans(Trans &trans, CachedConfig *cur, int byte_class) {
     CounterStateVec new_counter_states;
     CountersToReset rst;
     for (CA::StateId state_id : cur->first.normal_states) {
-        CA::State const& state = ca.get_state(state_id);
+        auto const& state = ca.get_state(state_id);
         for (auto &ca_trans : state.transitions()) {
             if (ca_trans.symbol() == byte_class || ca_trans.symbol() == ca.bytemap_range()) {
                 auto const& target_cnt = ca.get_state(ca_trans.target()).cnt();
                 if (target_cnt != CA::NoCounter) {
-                    new_counter_states.insert(CounterState{ca_trans.target(), {}, {}});
+                    new_counter_states.insert(CounterState(ca_trans.target(), {}, {}));
                     rst.add_state(ca_trans.target(), target_cnt);
                 } else {
                     new_normal_states.insert(ca_trans.target());
@@ -220,7 +220,7 @@ void CSA::compute_trans(Trans &trans, CachedConfig *cur, int byte_class) {
                             }
                             break;
                         case CA::Guard::True:
-                            new_counter_states.insert({ca_trans.target(), {}, {}});
+                            new_counter_states.insert(CounterState(ca_trans.target(), {}, {}));
                             switch (ca_trans.op()) {
                                 case CA::Operator::ID:
                                     for (unsigned i : state.normal()) {

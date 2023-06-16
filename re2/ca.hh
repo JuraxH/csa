@@ -12,7 +12,6 @@ namespace CA {
     using std::string;
 
     using CounterId = unsigned;
-    using Symbol = uint8_t;
     using StateId = unsigned;
 
     // counter id for states without counter
@@ -87,13 +86,14 @@ namespace CA {
         return "";
     }
 
-    class Transition {
+    template<typename SymbolT>
+    class TransitionT {
         public:
-        Transition(Symbol symbol, StateId target, 
+        TransitionT(SymbolT symbol, StateId target, 
                 Guard grd, Operator op) : symbol_(symbol),
                 target_(target), grd_(grd), op_(op) {} 
 
-        [[nodiscard]] Symbol symbol() const { return symbol_; }
+        [[nodiscard]] SymbolT symbol() const { return symbol_; }
         [[nodiscard]] StateId target() const { return target_; }
         [[nodiscard]] Guard grd() const { return grd_; }
         [[nodiscard]] Operator op() const { return op_; }
@@ -119,18 +119,20 @@ namespace CA {
         }
 
         private:
-            Symbol symbol_;
+            SymbolT symbol_;
             StateId target_;
             Guard grd_;
             Operator op_;
     };
 
-    class State {
+    template<typename SymbolT>
+    class StateT {
         public:
+            using Transition = TransitionT<SymbolT>;
             using Transitions = std::vector<Transition>;
 
-            State () : transitions_(), cnt_(0), final_(Guard::False) {}
-            State (CounterId cnt) : transitions_(), cnt_(cnt), final_(Guard::False) {}
+            StateT () : transitions_(), cnt_(0), final_(Guard::False) {}
+            StateT (CounterId cnt) : transitions_(), cnt_(cnt), final_(Guard::False) {}
 
             void add_transition(Transition &&trans) { transitions_.push_back(trans); }
 
@@ -175,10 +177,12 @@ namespace CA {
             Guard final_;
     };
 
-    using States = std::vector<State>;
 
+    template<typename SymbolT>
     class CA {
         public:
+        using State = StateT<SymbolT>;
+        using States = std::vector<State>;
 
 
         CA() : counters_(), states_({State()}), bytemap_(), bytemap_range_(0) { }

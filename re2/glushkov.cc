@@ -1,5 +1,4 @@
 #include "re2/glushkov.hh"
-#include "glushkov.hh"
 #include <algorithm>
 #include <cstdint>
 #include <unordered_set>
@@ -12,8 +11,6 @@ namespace CA::glushkov {
         range_states_() {
         ca_.set_bytemap(regex_.bytemap());
         ca_.set_bytemap_range(regex_.bytemap_range());
-
-        std::cerr << regex_.regexp()->ToString() << std::endl;
 
         Fragment frag = compute_fragment(regex_.regexp(), NoCounter);
 
