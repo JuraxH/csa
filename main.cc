@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "re2/ca.hh"
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
     //auto b = Builder("[^©-®]");
     //auto b = glushkov::Builder::get_ca("[©®]");
     auto b = glushkov2::Builder::get_ca(argv[1]);
-    cout << b.to_DOT([] (uint16_t sym) { return std::to_string(sym>>8) + '-' + to_string(sym&0xF);}) << "\n"s;
+    cout << b.to_DOT(&to_str_range) << "\n"s;
     //auto b = re2::range_builder::Builder();
     //b.prepare(100);
     //b.add_rune_range(0x00, 0x7f);

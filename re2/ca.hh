@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <vector>
 #include <string>
 #include <cassert>
+#include <sstream>
 
 #include <iostream>
 
@@ -19,6 +21,16 @@ namespace CA {
     const CounterId NoCounter = 0;
     const size_t ByteMapSize = 256;
     const StateId InitState = 0;
+
+    inline std::string to_str_range(uint16_t symbol) {
+        std::ostringstream oss;
+        auto hi = symbol>>8;
+        auto lo = symbol&0xFF;
+        if (hi >= '!' && hi <= '~') { oss << static_cast<char>(hi); } else { oss << "0x" << std::hex << hi; }
+        if (lo == hi) return oss.str();
+        if (lo >= '!' && lo <= '~') { oss << '-' << static_cast<char>(lo); } else { oss << "-0x" << std::hex << lo; }
+        return oss.str();
+    }
 
     template<typename T>
     class CounterType {
