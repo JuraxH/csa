@@ -3,8 +3,10 @@ UTIL_SRC = util/rune.cc util/strutil.cc
 UTIL_OBJ = build/rune.o build/strutil.o 
 
 RE2_HEAD = bitmap256.h pod_array.h prog.h re2.h regexp.h sparse_array.h sparse_set.h stringpiece.h unicode_casefold.h unicode_groups.h walker-inl.h
-RE2_SRC = re2/glushkov2.cc re2/glushkov.cc re2/csa.cc re2/compile.cc re2/parse.cc re2/perl_groups.cc re2/prog.cc re2/re2.cc re2/regexp.cc re2/simplify.cc re2/stringpiece.cc re2/tostring.cc re2/unicode_casefold.cc re2/unicode_groups.cc
-RE2_OBJ = build/glushkov2.o build/glushkov.o build/csa.o build/compile.o build/parse.o build/perl_groups.o build/prog.o build/re2.o build/regexp.o build/simplify.o build/stringpiece.o build/tostring.o build/unicode_casefold.o build/unicode_groups.o
+RE2_SRC = re2/glushkov2.cc re2/glushkov.cc re2/compile.cc re2/parse.cc re2/perl_groups.cc re2/prog.cc re2/re2.cc re2/regexp.cc re2/simplify.cc re2/stringpiece.cc re2/tostring.cc re2/unicode_casefold.cc re2/unicode_groups.cc
+RE2_OBJ = build/glushkov2.o build/glushkov.o build/compile.o build/parse.o build/perl_groups.o build/prog.o build/re2.o build/regexp.o build/simplify.o build/stringpiece.o build/tostring.o build/unicode_casefold.o build/unicode_groups.o
+CSA_SRC = csa.cc
+CSA_OBJ = build/csa.o
 
 
 
@@ -33,11 +35,11 @@ build/%.o: util/%.cc
 build/%.o: %.cc
 	$(CXX) $(INCLUDE) -c $(CXXFLAGS) $^ -o $@
 
-build/main: build/main.o $(RE2_OBJ) $(UTIL_OBJ)
-	g++ $(LDFLAGS) $^ $(LIBS) -o $@
+build/main: build/main.o $(CSA_OBJ) $(RE2_OBJ) $(UTIL_OBJ)
+	$(CXX) $(LDFLAGS) $^ $(LIBS) -o $@
 
-build/csa_bench: build/csa_bench.o $(RE2_OBJ) $(UTIL_OBJ)
-	g++ -static $(LDFLAGS) $^ $(LIBS) -o $@
+build/csa_bench: build/csa_bench.o $(CSA_OBJ) $(RE2_OBJ) $(UTIL_OBJ)
+	$(CXX) -static $(LDFLAGS) $^ $(LIBS) -o $@
 
 clean:
 	rm build/*
