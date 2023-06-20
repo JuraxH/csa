@@ -121,7 +121,7 @@ namespace CSA {
 
     class CountingSet {
         public:
-        CountingSet() = default;
+        CountingSet() : list_(), offset_(1) { }
         CountingSet(unsigned val) :  list_({0,}), offset_(val) { }
 
         CountingSet(CountingSet && other) : list_(std::move(other.list_)),
@@ -209,6 +209,7 @@ namespace CSA {
 
     class CounterToReset {
         public:
+        CounterToReset() : counter(), states() {}
         CounterToReset(CA::CounterId counter) : counter(counter), states() {}
         CounterToReset(CA::CounterId counter, CA::StateId state) : counter(counter), states({state,}) {}
         CounterToReset(CA::CounterId counter, OrdVector<CA::StateId> &&states) 
@@ -230,7 +231,7 @@ namespace CSA {
 
     class CountersToReset {
         public:
-        CountersToReset() = default;
+        CountersToReset() : counters() {}
         void add_state(CA::StateId state, CA::CounterId counter);
         OrdVector<OrdVector<CA::StateId>> get_cnt_set_names();
 
@@ -296,7 +297,7 @@ namespace CSA {
         public:
         Update(UpdateEnum type, CachedState *next_state, UpdateProg &&prog) 
             : type_(type), next_state_(next_state), prog_(std::move(prog)) {}
-        Update() = default;
+        Update() : type_(), next_state_(), prog_() {}
 
         Update(Update&&) = default;
         Update(Update const&) = default;
@@ -435,7 +436,7 @@ namespace CSA {
         Trans() : type_(TransEnum::NotComputed) {}
 
         void set_next_state(CachedState* next_state, TransEnum type) { type_ = type; next_state_ = next_state; }
-        void set_small(SmallTrans* small) { type_ = TransEnum::Small; small = small; }
+        void set_small(SmallTrans* small) { type_ = TransEnum::Small; small_ = small; }
         void set_update(Update* update) { type_ = TransEnum::NoCondition; update_ = update; }
         void set_lazy(LazyTrans* lazy) { type_ = TransEnum::Lazy; lazy_ = lazy; }
 
@@ -502,7 +503,7 @@ namespace CSA {
         void execute_update(Update const& update);
         uint64_t compute_update_index(GuardVec const& guards);
         void compute_trans(Trans& trans, uint8_t byte_class);
-        Update const& get_lazy_update(LazyTrans& lazy, uint8_t byte_class);
+        Update const& get_lazy_update(LazyTrans& lazy);
         
 
         CSA csa_;
@@ -515,7 +516,7 @@ namespace CSA {
     class Matcher {
         public:
         Matcher(std::string_view pattern);
-        bool Match(std::string_view text);
+        bool match(std::string_view text);
 
         private:
         Config config_;

@@ -16,7 +16,7 @@ using namespace std::string_literals;
 unsigned CountingSet::max_postponed(int max) const {
     assert(!list_.empty());
 
-    if (offset_ - list_.back() + 1 <= max) {
+    if (static_cast<int>(offset_ - list_.back() + 1) <= max || max == -1) {
         return offset_ - list_.back() + 1;
     }
     return offset_ - *prev(list_.end(), 2) + 1;
@@ -59,7 +59,7 @@ void CountingSet::increment(int max) {
     assert(!list_.empty());
 
     offset_++;
-    if (offset_ - list_.back() > max && max != -1) {
+    if (static_cast<int>(offset_ - list_.back()) > max && max != -1) {
         list_.pop_back();
     }
 }
@@ -388,6 +388,8 @@ Trans::~Trans() {
         case TransEnum::Lazy:
             delete lazy_;
             break;
+        default:
+            break;
     }
 }
 
@@ -423,9 +425,10 @@ bool Config::step(uint8_t c) {
                 compute_update_index(trans.small()->guards())));
             break;
         case TransEnum::Lazy:
-            execute_update(get_lazy_update(*trans.lazy(), byte_class));
+            execute_update(get_lazy_update(*trans.lazy()));
+            break;
         default:
-            assert(false);
+            FATAL_ERROR("unexpected type of transition", Errors::InternalFailure);
     }
     if (cur_state_->first.normal().empty() && cur_state_->first.counter().empty()) {
         return false;
@@ -456,7 +459,7 @@ bool Config::eval_guard(CA::Guard guard, CounterState const& cnt_state) {
     if (guard == CA::Guard::CanIncr) {
         auto max = csa_.ca().get_counter(csa_.ca().get_state(cnt_state.state()).cnt()).max();
         for (auto i : cnt_state.actual()) {
-            if (cnt_sets_[i].min() < max) {
+            if (cnt_sets_[i].min() < static_cast<unsigned>(max)) {
                 return true;
             }
         }
@@ -467,7 +470,7 @@ bool Config::eval_guard(CA::Guard guard, CounterState const& cnt_state) {
     } else { // CanExit
         auto min = csa_.ca().get_counter(csa_.ca().get_state(cnt_state.state()).cnt()).min();
         for (auto i : cnt_state.actual()) {
-            if (cnt_sets_[i].max() >= min) {
+            if (cnt_sets_[i].max() >= static_cast<unsigned>(min)) {
                 return true;
             }
         }
@@ -502,6 +505,7 @@ void Config::execute_update(Update const& update) {
                         break;
                 }
             }
+            break;
         case UpdateEnum::NewSets:
             cnt_sets_tmp_.resize(update.next_state()->first.cnt_sets());
             for (auto const& inst : update.prog()) {
@@ -591,7 +595,7 @@ void Config::compute_trans(Trans& trans, uint8_t byte_class) {
     }
 }
 
-Update const& Config::get_lazy_update(LazyTrans& lazy, uint8_t byte_class) {
+Update const& Config::get_lazy_update(LazyTrans& lazy) {
     auto const& guards = lazy.guards();
     vector<bool> sat_guards(guards.size(), false);
     uint64_t index = 0;
@@ -608,13 +612,15 @@ Update const& Config::get_lazy_update(LazyTrans& lazy, uint8_t byte_class) {
 
 Matcher::Matcher(std::string_view pattern) : config_(CA::glushkov::Builder::get_ca(pattern)) { }
 
-bool Matcher::Match(string_view text) {
+bool Matcher::match(string_view text) {
     for (char c : text) {
         if (!config_.step(c)) {
             return false;
         }
     }
-    return config_.accepting();
+    bool res = config_.accepting();
+    config_.reset();
+    return res;
 }
 
 // for debugging:
@@ -640,6 +646,7 @@ string State::to_str() const {
     for (auto const&i : counter_) {
         str += i.to_str() + "\n"s;
     }
+    return str;
 }
 
 std::string CountingSet::to_str() const {
@@ -657,7 +664,7 @@ string LValue::to_str() const {
     return to_string(state_);
 }
 
-std::string LValueTable::to_str() const {
+string LValueTable::to_str() const {
     string str = "lval table:\n"s;
     for (size_t i = 0; i < tab_.size(); i++) {
         str += std::to_string(i) + ": "s;
@@ -696,6 +703,7 @@ string CntSetInst::to_str() const {
         case CntSetInstEnum::Rst_to_1:
             return "RST_TO_1 "s + to_string(origin_);
     }
+    return "";
 }
 
 string Update::to_str() const {

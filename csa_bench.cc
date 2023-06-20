@@ -1,4 +1,4 @@
-#include "re2/csa.hh"
+#include "csa.hh"
 #include <fstream>
 #include <string>
 #include <iostream>
@@ -25,11 +25,11 @@ int main(int argc, char **argv) {
         pattern = pattern + string(")\\C*");
     }
 
-    CSA::CSA csa{pattern};
+    CSA::Matcher matcher(pattern);
     std::string line;
     unsigned matches = 0;
     while (getline(input, line)) {
-        if (csa.match(line)) {
+        if (matcher.match(line)) {
             ++matches;
         }
     }

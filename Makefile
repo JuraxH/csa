@@ -10,8 +10,7 @@ CSA_OBJ = build/csa.o
 
 
 
-CXXFLAGS=-std=c++20 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g 
-#-O3 -DNDEBUG
+CXXFLAGS=-std=c++20 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g -O3 -DNDEBUG
 
 CXX=g++
 
@@ -40,6 +39,9 @@ build/main: build/main.o $(CSA_OBJ) $(RE2_OBJ) $(UTIL_OBJ)
 
 build/csa_bench: build/csa_bench.o $(CSA_OBJ) $(RE2_OBJ) $(UTIL_OBJ)
 	$(CXX) -static $(LDFLAGS) $^ $(LIBS) -o $@
+
+build/ca_builder: build/ca_builder.o $(RE2_OBJ) $(UTIL_OBJ)
+	$(CXX) $(LDFLAGS) $^ $(LIBS) -o $@
 
 clean:
 	rm build/*
