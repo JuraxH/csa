@@ -1,6 +1,8 @@
 #include "re2/glushkov.hh"
+#include "ca.hh"
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <unordered_set>
 #include <vector>
 
@@ -13,6 +15,27 @@ namespace CA::glushkov {
         ca_.set_bytemap_range(regex_.bytemap_range());
 
         Fragment frag = compute_fragment(regex_.regexp(), NoCounter);
+
+        // stuff to add if some parts are unanchored
+        if (!frag.first.empty()) {
+            auto any_loop_start = ca_.add_state(NoCounter);
+            if (frag.nullable) {
+                ca_.get_state(any_loop_start).set_final(ca_.get_counters());
+            }
+            add_transition_init(ca_.get_init(), any_loop_start, ca_.bytemap_range());
+            add_transition(any_loop_start, any_loop_start, ca_.bytemap_range());
+            for (auto &first : frag.first) {
+                add_transition(any_loop_start, first.state, first.byte_class);
+            }
+        }
+        if (!frag.last.empty()) {
+            auto any_loop_end = ca_.add_state(NoCounter);
+            ca_.get_state(any_loop_end).set_final(ca_.get_counters());
+            add_transition(any_loop_end, any_loop_end, ca_.bytemap_range());
+            for (auto last : frag.last) {
+                add_transition(last, any_loop_end, ca_.bytemap_range());
+            }
+        }
 
         auto &init = ca_.get_init();
 
@@ -268,9 +291,20 @@ namespace CA::glushkov {
 
     Fragment Builder::concat_frag(re2::Regexp *re, CounterId cnt) {
         Fragment frag{{}, {}, true};
+        bool front_anchor = false;
+        bool back_anchor = false;
         bool start = true;
         auto subs = re->sub();
         for (auto i = 0; i < re->nsub(); ++i) {
+            if (subs[i]->op() == re2::kRegexpBeginText || subs[i]->op() == re2::kRegexpBeginLine) {
+                assert(i == 0 && re->nsub() > 1);
+                front_anchor = true;
+                continue;
+            } else if (subs[i]->op() == re2::kRegexpEndText || subs[i]->op() == re2::kRegexpEndLine) {
+                assert(i != 0 && i + 1 == re->nsub());
+                continue;
+                back_anchor = true;
+            }
             Fragment sub_frag = compute_fragment(subs[i], cnt);
             if (i != 0) {
                 for (auto const& prev : frag.last) {
@@ -295,6 +329,20 @@ namespace CA::glushkov {
             } else {
                 frag.last = std::move(sub_frag.last);
             }
+        }
+        if (front_anchor) {
+            frag.nullable = false;
+            for (auto const& first : frag.first) {
+                add_transition(InitState, first.state, first.byte_class);
+            }
+            frag.first.clear();
+        }
+        if (back_anchor) {
+            frag.nullable = false;
+            for (auto const& last : frag.last) {
+                ca_.get_state(last).set_final(ca_.get_counters());
+            }
+            frag.last.clear();
         }
         return frag;
     }

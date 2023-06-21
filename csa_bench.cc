@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
     std::ifstream input(argv[2]);
 
     // stuff to get rid of ^ and $
+    /*
     string pattern;
     if (argv[1][0] == '^') {
         pattern = string("(?:") +  string((char *)&(argv[1][1]));
@@ -24,8 +25,9 @@ int main(int argc, char **argv) {
     } else {
         pattern = pattern + string(")\\C*");
     }
+    */
 
-    CSA::Matcher matcher(pattern);
+    CSA::Matcher matcher(argv[1]);
     std::string line;
     unsigned matches = 0;
     while (getline(input, line)) {
