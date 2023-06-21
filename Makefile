@@ -10,7 +10,8 @@ CSA_OBJ = build/csa.o
 
 
 
-CXXFLAGS=-std=c++20 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g -O3 -DNDEBUG
+CXXFLAGS=-std=c++20 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g -O3
+#-O3 -DNDEBUG
 
 CXX=g++
 
@@ -23,7 +24,7 @@ OBJ= ca.o derivatives.o unicode_groups.o prog.o unicode_casefold.o csa.o perl_gr
 .PHONY: all clean
 
 #all: $(patsubst %.cc,%,$(wildcard *.cc)) mata/build/src/libmata.a
-all: build/main
+all: build/main build/ca_builder
 
 build/%.o: re2/%.cc
 	$(CXX) $(INCLUDE) -c $(CXXFLAGS) $^ -o $@

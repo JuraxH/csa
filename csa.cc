@@ -71,7 +71,7 @@ void CountingSet::rst_to_1() {
 }
 
 void CountingSet::insert_1() {
-    if (list_.front() != offset_ - 1) {
+    if (list_.empty() || list_.front() != offset_ - 1) {
         list_.push_front(offset_ - 1);
     }
 }
@@ -168,15 +168,17 @@ OrdVector<OrdVector<CA::StateId>> TransBuilder::compute_state_idexes(CSA& csa, U
         }
         state_indexes.insert(std::move(states));
     }
-    for (auto& name: cnts_to_reset_.get_cnt_set_names()) {
-        state_indexes.insert(std::move(name));
-    }
     return state_indexes;
 }
 
 Update TransBuilder::compute_update(CSA& csa) {
+    LOG_BUILDER(to_str());
     Update update;
     auto state_indexes = compute_state_idexes(csa, update);
+    auto rst_cnt_names = cnts_to_reset_.get_cnt_set_names();
+    for (auto& name: rst_cnt_names) {
+        state_indexes.insert(std::move(name));
+    }
     for (unsigned i = 0; i < lvals_.size(); i++) {
         auto& row = lvals_[i];
         if (row.empty()) {
@@ -192,6 +194,13 @@ Update TransBuilder::compute_update(CSA& csa) {
             } else {
                 counter_.find(CounterState(lval.state()))->postponed().insert(index);
             }
+        }
+    }
+    for (auto& name: rst_cnt_names) {
+        unsigned index = state_indexes.get_index(name);
+        update.add_inst(CntSetInstEnum::Insert_1, index, index);
+        for (auto state : name) {
+            counter_.find(CounterState(state))->actual().insert(index);
         }
     }
     update.optimize(state_indexes.size());
@@ -312,8 +321,8 @@ Update GuardedTransBuilder::create_update(std::vector<bool> const& sat_guards, C
 const std::vector<bool> small_size_1_1{false,};
 const std::vector<bool> small_size_1_2{true,};
 const std::vector<bool> small_size_2_1{false, false};
-const std::vector<bool> small_size_2_2{false, true};
-const std::vector<bool> small_size_2_3{true, false};
+const std::vector<bool> small_size_2_2{true, false};
+const std::vector<bool> small_size_2_3{false, true};
 const std::vector<bool> small_size_2_4{true, true};
 
 SmallTrans* GuardedTransBuilder::small(CSA& csa) {
@@ -404,6 +413,8 @@ CachedState* CSA::get_state(State state) {
 }
 
 bool Config::step(uint8_t c) {
+    LOG_CONFIG(cur_state_->first.to_str(), cnt_sets_to_str());
+    LOG_CONFIG_SYMBOL(((c >= '!' && c <= '~') ? ("\""s + string(1, c) + "\""s) : to_string(c)), to_string(csa_.ca().get_byte_class(c)));
     uint8_t byte_class = csa_.ca().get_byte_class(c);
     Trans& trans = cur_state_->second[byte_class];
     if (trans.type() == TransEnum::NotComputed) {
@@ -456,32 +467,40 @@ bool Config::accepting() {
 }
 
 bool Config::eval_guard(CA::Guard guard, CounterState const& cnt_state) {
+    LOG_EVAL_GUARD(CA::guard_to_string(guard), cnt_state.to_str());
     if (guard == CA::Guard::CanIncr) {
         auto max = csa_.ca().get_counter(csa_.ca().get_state(cnt_state.state()).cnt()).max();
+        LOG_EVAL_GUARD_MAX(max);
         for (auto i : cnt_state.actual()) {
             if (cnt_sets_[i].min() < static_cast<unsigned>(max)) {
+                LOG_EVAL_GUARD_RES("true");
                 return true;
             }
         }
         if (!cnt_state.postponed().empty()) {
             FATAL_ERROR("testing guard on state that has postponed incr", Errors::DoubleIncr);
         }
+        LOG_EVAL_GUARD_RES("false");
         return false;
     } else { // CanExit
         auto min = csa_.ca().get_counter(csa_.ca().get_state(cnt_state.state()).cnt()).min();
+        LOG_EVAL_GUARD_MIN(min);
         for (auto i : cnt_state.actual()) {
             if (cnt_sets_[i].max() >= static_cast<unsigned>(min)) {
+                LOG_EVAL_GUARD_RES("true");
                 return true;
             }
         }
         if (!cnt_state.postponed().empty()) {
             FATAL_ERROR("testing guard on state that has postponed incr", Errors::DoubleIncr);
         }
+        LOG_EVAL_GUARD_RES("false");
         return false;
     }
 }
 
 void Config::execute_update(Update const& update) {
+    LOG_UPDATE(update.to_str());
     switch(update.type()) {
         case UpdateEnum::Noop:
             break;
@@ -519,7 +538,7 @@ void Config::execute_update(Update const& update) {
                         cnt_sets_tmp_[inst.target()].merge(std::move(cnt_sets_[inst.origin()]));
                         break;
                     case CntSetInstEnum::Incr:
-                        cnt_sets_tmp_[inst.index()].increment(inst.max());
+                        cnt_sets_[inst.index()].increment(inst.max());
                         break;
                 }
             }
@@ -649,7 +668,7 @@ string State::to_str() const {
     return str;
 }
 
-std::string CountingSet::to_str() const {
+string CountingSet::to_str() const {
     string str = "{"s;
     for (auto i : list_) {
         str += std::to_string(offset_ - i) + ", "s;
@@ -724,6 +743,31 @@ string Update::to_str() const {
         str += '\t' + inst.to_str() + '\n';
     }
     return str + "next:"s + next_state_->first.to_str();
+}
+
+string TransBuilder::to_str() const {
+    string str = "Normal: {"s;
+    for (auto const&i : normal_) {
+        str += std::to_string(i) + ", "s;
+    }
+    str += "} Counter: "s;
+    for (auto const&i : counter_) {
+        str += to_string(i.state()) + ", "s;
+    }
+    str += lvals_.to_str();
+    str += cnts_to_reset_.to_str();
+    return str;
+}
+
+string Config::cnt_sets_to_str() const {
+    if (cnt_sets_.empty()) {
+        return "No cnt set\n"s;
+    }
+    string str;
+    for (size_t i = 0; i < cnt_sets_.size(); ++i) {
+        str += std::to_string(i) + ": "s + cnt_sets_[i].to_str() + "\n"s;
+    }
+    return str;
 }
 
 } // namespace CSA

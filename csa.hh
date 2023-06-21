@@ -11,6 +11,48 @@
 #include "re2/ca.hh"
 #include "util/ord_vector.hh"
 
+
+// log options: conditions, cnt_sets, config,
+#if 0
+#define CSA_LOG_CONFIG 1
+#define CSA_LOG_EVAL_GUARD 1
+#define CSA_LOG_UPDATE 1
+#define CSA_LOG_BUILDER 1
+#endif
+
+#ifdef CSA_LOG_CONFIG
+#define LOG_CONFIG(state, cnt_sets) std::cerr << "<<< next loop >>>\n=================\nLOG_CONFIG:\nSTATE:\n" << state << "CNT_SETS:\n" << cnt_sets << std::endl;
+#define LOG_CONFIG_SYMBOL(byte, symbol) std::cerr << "LOG_CONFIG: BYTE: " << byte << " -> SYMBOL: " << symbol << std::endl;
+#else
+#define LOG_CONFIG(state, cnt_sets) 0
+#define LOG_CONFIG_SYMBOL(byte, symbol) 0
+#endif
+
+#ifdef CSA_LOG_EVAL_GUARD
+#define LOG_EVAL_GUARD(condition, cnt_state) std::cerr << "LOG_EVAL_GUARD: CONDITION: " << condition << " CNT_STATE: " << cnt_state;
+#define LOG_EVAL_GUARD_RES(result) std::cerr << " RES: " << result << std::endl;
+#define LOG_EVAL_GUARD_MIN(min) std::cerr << " MIN: " << min;
+#define LOG_EVAL_GUARD_MAX(max) std::cerr << " MAX: " << max;
+#else
+#define LOG_EVAL_GUARD(state, cnt_sets) 0
+#define LOG_EVAL_GUARD_RES(resutl) 0
+#define LOG_EVAL_GUARD_MIN(min) 0
+#define LOG_EVAL_GUARD_MAX(max) 0
+#endif
+
+#ifdef CSA_LOG_UPDATE
+#define LOG_UPDATE(update) std::cerr << "LOG_UPDATE:\n" << update << std::endl;
+#else
+#define LOG_UPDATE(update) 0
+#endif
+
+#ifdef CSA_LOG_BUILDER
+#define LOG_BUILDER(builder) std::cerr << "LOG_BUILDER:\n" << builder << std::endl;
+#else
+#define LOG_BUILDER(builder) 0
+#endif
+
+
 #define FATAL_ERROR(msg, err) do {\
     std::cerr << "Error:" << __FILE__ << ":" << __LINE__ << ": " << __func__ << ": " \
         << msg << std::endl; \
@@ -360,7 +402,6 @@ namespace CSA {
 
     using UpdateCache = std::unordered_map<uint64_t, Update>;
 
-    class GuardedTransBuilder;
     class CSA;
 
     class TransBuilder {
@@ -380,7 +421,12 @@ namespace CSA {
             lvals_.add_lval(lval.state(), lval.type(), index);
             counter_.insert(CounterState(lval.state()));
         }
-        void add_rst(CA::StateId state, CA::CounterId counter) { cnts_to_reset_.add_state(state, counter); }
+        void add_rst(CA::StateId state, CA::CounterId counter) { 
+            counter_.insert(CounterState(state));
+            cnts_to_reset_.add_state(state, counter); 
+        }
+
+        std::string to_str() const;
 
         private:
         OrdVector<OrdVector<CA::StateId>> compute_state_idexes(CSA& csa, Update& update);
@@ -504,7 +550,8 @@ namespace CSA {
         uint64_t compute_update_index(GuardVec const& guards);
         void compute_trans(Trans& trans, uint8_t byte_class);
         Update const& get_lazy_update(LazyTrans& lazy);
-        
+
+        std::string cnt_sets_to_str() const;
 
         CSA csa_;
         CachedState* cur_state_;
