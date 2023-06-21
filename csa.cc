@@ -634,6 +634,7 @@ Matcher::Matcher(std::string_view pattern) : config_(CA::glushkov::Builder::get_
 bool Matcher::match(string_view text) {
     for (char c : text) {
         if (!config_.step(c)) {
+            config_.reset();
             return false;
         }
     }
