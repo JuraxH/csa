@@ -458,8 +458,15 @@ namespace CA::glushkov {
     }
 
     Fragment Builder::repeat_frag(re2::Regexp *re, CounterId cnt) {
+        // special cases handled separately because of some regexes in benchmarks
         if (re->min() == 0 && re->max() == -1) {
             return star_frag(re, cnt);
+        } else if (re->min() == 0 && re->max() == 1) {
+            return quest_frag(re, cnt);
+        } else if (re->min() == 1 && re->max() == 1) {
+            return compute_fragment(re->sub()[0], cnt);
+        } else if (re->min() == 1 && re->max() == -1) {
+            return plus_frag(re, cnt);
         } else {
             if (cnt != 0) {
                 throw std::logic_error("Nested repetition not supported");
