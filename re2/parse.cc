@@ -17,6 +17,7 @@
 // See regexp.h for rationale.
 
 #include <ctype.h>
+#include <limits>
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -41,7 +42,7 @@
 namespace re2 {
 
 // Controls the maximum repeat count permitted by the parser.
-static int maximum_repeat_count = 1000;
+static int maximum_repeat_count = std::numeric_limits<int>::max();
 
 // Regular expression parse state.
 // The list of parsed regexps so far is maintained as a vector of
