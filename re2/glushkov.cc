@@ -311,11 +311,13 @@ namespace CA::glushkov {
                     } else {
                         front_anchor_alter = sub_frag;
                         sub_frag.nullable = true;
-                        sub_frag.last.clear();
                         sub_frag.first.clear();
                     }
                 }
                 if (sub_frag.anchor_flag & EndAnchor) {
+                    if (front_anchor && i == 1) {
+                        ca_.get_init().set_final(ca_.get_counters());
+                    }
                     for (auto const& last : frag.last) {
                         ca_.get_state(last).set_final(ca_.get_counters());
                     }
@@ -357,16 +359,6 @@ namespace CA::glushkov {
                 frag.first.clear();
                 frag.nullable = false;
             } else {
-                for (auto last : front_anchor_alter.last) {
-                    for (auto const& first : frag.first) {
-                        add_transition(last, first.state, first.byte_class);
-                    }
-                }
-                if (frag.nullable) {
-                    frag.last.reserve(frag.last.size() + front_anchor_alter.last.size());
-                    std::move(front_anchor_alter.last.begin(), front_anchor_alter.last.end(), 
-                            std::inserter(frag.last, frag.last.end()));
-                }
                 if (front_anchor_alter.nullable) {
                     frag.first.reserve(frag.first.size() + front_anchor_alter.first.size());
                     std::move(front_anchor_alter.first.begin(), front_anchor_alter.first.end(), 
