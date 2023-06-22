@@ -302,8 +302,8 @@ namespace CA::glushkov {
                 continue;
             } else if (subs[i]->op() == re2::kRegexpEndText || subs[i]->op() == re2::kRegexpEndLine) {
                 assert(i != 0 && i + 1 == re->nsub());
-                continue;
                 back_anchor = true;
+                continue;
             }
             Fragment sub_frag = compute_fragment(subs[i], cnt);
             if (i != 0) {
