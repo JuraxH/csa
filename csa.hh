@@ -24,8 +24,8 @@
 #define LOG_CONFIG(state, cnt_sets) std::cerr << "<<< next loop >>>\n=================\nLOG_CONFIG:\nSTATE:\n" << state << "CNT_SETS:\n" << cnt_sets << std::endl;
 #define LOG_CONFIG_SYMBOL(byte, symbol) std::cerr << "LOG_CONFIG: BYTE: " << byte << " -> SYMBOL: " << symbol << std::endl;
 #else
-#define LOG_CONFIG(state, cnt_sets) 0
-#define LOG_CONFIG_SYMBOL(byte, symbol) 0
+#define LOG_CONFIG(state, cnt_sets) 
+#define LOG_CONFIG_SYMBOL(byte, symbol) 
 #endif
 
 #ifdef CSA_LOG_EVAL_GUARD
@@ -34,22 +34,22 @@
 #define LOG_EVAL_GUARD_MIN(min) std::cerr << " MIN: " << min;
 #define LOG_EVAL_GUARD_MAX(max) std::cerr << " MAX: " << max;
 #else
-#define LOG_EVAL_GUARD(state, cnt_sets) 0
-#define LOG_EVAL_GUARD_RES(resutl) 0
-#define LOG_EVAL_GUARD_MIN(min) 0
-#define LOG_EVAL_GUARD_MAX(max) 0
+#define LOG_EVAL_GUARD(state, cnt_sets)  
+#define LOG_EVAL_GUARD_RES(resutl)  
+#define LOG_EVAL_GUARD_MIN(min)  
+#define LOG_EVAL_GUARD_MAX(max) 
 #endif
 
 #ifdef CSA_LOG_UPDATE
 #define LOG_UPDATE(update) std::cerr << "LOG_UPDATE:\n" << update << std::endl;
 #else
-#define LOG_UPDATE(update) 0
+#define LOG_UPDATE(update) 
 #endif
 
 #ifdef CSA_LOG_BUILDER
 #define LOG_BUILDER(builder) std::cerr << "LOG_BUILDER:\n" << builder << std::endl;
 #else
-#define LOG_BUILDER(builder) 0
+#define LOG_BUILDER(builder) 
 #endif
 
 
