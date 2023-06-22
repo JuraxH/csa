@@ -1,8 +1,10 @@
 #include "re2/glushkov.hh"
 #include "ca.hh"
+#include "glushkov.hh"
 #include <algorithm>
 #include <cstdint>
 #include <iterator>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -17,6 +19,7 @@ namespace CA::glushkov {
         Fragment frag = compute_fragment(regex_.regexp(), NoCounter);
 
         // stuff to add if some parts are unanchored
+        assert(frag.anchor_flag == NoAnchor);
         if (!frag.first.empty()) {
             auto any_loop_start = ca_.add_state(NoCounter);
             if (frag.nullable) {
@@ -146,7 +149,7 @@ namespace CA::glushkov {
         std::fill(range_states_.begin(), range_states_.end(), 0);
 
         range_states_[0] = ca_.add_state(cnt); // the last state
-        Fragment frag = {{}, {range_states_[0]}, false};
+        Fragment frag = {{}, {range_states_[0]}, false, NoAnchor};
 
         std::unordered_set<uint8_t> ascii_byte_classes;
         std::vector<uint8_t> byte_classes;
@@ -241,9 +244,9 @@ namespace CA::glushkov {
         int len = re2::runetochar(chars, &rune);
         if (len == 1) {
             auto s = ca_.add_state(cnt);
-            return Fragment{{FirstState{s, ca_.get_byte_class(chars[0])}}, {s}, false};
+            return Fragment{{FirstState{s, ca_.get_byte_class(chars[0])}}, {s}, false, NoAnchor};
         } else {
-            Fragment frag{{}, {}, false};
+            Fragment frag{{}, {}, false, NoAnchor};
             StateId prev;
             for (auto i = 0; i < len; i++) {
                 auto s = ca_.add_state(cnt);
@@ -264,7 +267,7 @@ namespace CA::glushkov {
     Fragment Builder::lit_str_frag(re2::Regexp *re, CounterId cnt) {
         assert(re->nrunes() > 0);
 
-        Fragment frag{{}, {}, false};
+        Fragment frag{{}, {}, false, NoAnchor};
         char chars[re2::UTFmax * re->nrunes()];
         int base = 0;
         StateId prev;
@@ -290,22 +293,38 @@ namespace CA::glushkov {
     }
 
     Fragment Builder::concat_frag(re2::Regexp *re, CounterId cnt) {
-        Fragment frag{{}, {}, true};
+        Fragment frag{{}, {}, true, NoAnchor};
         bool front_anchor = false;
-        bool back_anchor = false;
+        bool front_anchor_no_alters = false;
+        Fragment front_anchor_alter;
         bool start = true;
         auto subs = re->sub();
         for (auto i = 0; i < re->nsub(); ++i) {
-            if (subs[i]->op() == re2::kRegexpBeginText || subs[i]->op() == re2::kRegexpBeginLine) {
-                assert(i == 0 && re->nsub() > 1);
-                front_anchor = true;
-                continue;
-            } else if (subs[i]->op() == re2::kRegexpEndText || subs[i]->op() == re2::kRegexpEndLine) {
-                assert(i != 0 && i + 1 == re->nsub());
-                back_anchor = true;
-                continue;
-            }
             Fragment sub_frag = compute_fragment(subs[i], cnt);
+            if (sub_frag.anchor_flag) {
+                if (sub_frag.anchor_flag & StartAnchor) {
+                    assert(i == 0 && re->nsub() > 1);
+                    front_anchor = true;
+                    if (sub_frag.anchor_flag & NoStartAlter) {
+                        sub_frag.nullable = true;
+                        front_anchor_no_alters = true;
+                    } else {
+                        front_anchor_alter = sub_frag;
+                        sub_frag.nullable = true;
+                        sub_frag.last.clear();
+                        sub_frag.first.clear();
+                    }
+                }
+                if (sub_frag.anchor_flag & EndAnchor) {
+                    for (auto const& last : frag.last) {
+                        ca_.get_state(last).set_final(ca_.get_counters());
+                    }
+                    if (sub_frag.anchor_flag & NoEndAlter) {
+                        assert(i != 0 && i + 1 == re->nsub());
+                        frag.last.clear();
+                    }
+                }
+            } 
             if (i != 0) {
                 for (auto const& prev : frag.last) {
                     for (auto const& cur: sub_frag.first) {
@@ -331,27 +350,50 @@ namespace CA::glushkov {
             }
         }
         if (front_anchor) {
-            frag.nullable = false;
             for (auto const& first : frag.first) {
                 add_transition(InitState, first.state, first.byte_class);
             }
-            frag.first.clear();
-        }
-        if (back_anchor) {
-            frag.nullable = false;
-            for (auto const& last : frag.last) {
-                ca_.get_state(last).set_final(ca_.get_counters());
+            if (front_anchor_no_alters) {
+                frag.first.clear();
+                frag.nullable = false;
+            } else {
+                for (auto last : front_anchor_alter.last) {
+                    for (auto const& first : frag.first) {
+                        add_transition(last, first.state, first.byte_class);
+                    }
+                }
+                if (frag.nullable) {
+                    frag.last.reserve(frag.last.size() + front_anchor_alter.last.size());
+                    std::move(front_anchor_alter.last.begin(), front_anchor_alter.last.end(), 
+                            std::inserter(frag.last, frag.last.end()));
+                }
+                if (front_anchor_alter.nullable) {
+                    frag.first.reserve(frag.first.size() + front_anchor_alter.first.size());
+                    std::move(front_anchor_alter.first.begin(), front_anchor_alter.first.end(), 
+                            std::inserter(frag.first, frag.first.end()));
+                } else {
+                    frag.first = std::move(front_anchor_alter.first);
+                    frag.nullable = false;
+                }
             }
-            frag.last.clear();
         }
         return frag;
     }
 
     Fragment Builder::alter_frag(re2::Regexp *re, CounterId cnt) {
-        Fragment frag{{}, {}, false};
+        Fragment frag{{}, {}, false, NoAnchor};
         auto const& subs = re->sub();
         for (auto i = 0; i < re->nsub(); ++i) {
             Fragment sub_frag = compute_fragment(subs[i], cnt);
+            if (sub_frag.anchor_flag) {
+                if (sub_frag.anchor_flag & StartAnchor) {
+                    frag.anchor_flag |= StartAnchor;
+                }
+                if (sub_frag.anchor_flag & EndAnchor) {
+                    frag.anchor_flag |= EndAnchor;
+                }
+                continue;
+            }
             if (sub_frag.nullable) {
                 frag.nullable = true;
             }
@@ -401,7 +443,7 @@ namespace CA::glushkov {
             std::move(frag1.last.begin(), frag1.last.end(), 
                     std::inserter(frag2.last, frag2.last.end()));
         }
-        return Fragment{std::move(frag1.first), std::move(frag2.last), false};
+        return Fragment{std::move(frag1.first), std::move(frag2.last), false, NoAnchor};
     }
 
     Fragment Builder::quest_frag(re2::Regexp *re, CounterId cnt) {
@@ -412,7 +454,7 @@ namespace CA::glushkov {
 
     Fragment Builder::any_byte_frag(CounterId cnt) {
         auto s = ca_.add_state(cnt);
-        return Fragment{{FirstState{s, ca_.bytemap_range()}}, {s}, false};
+        return Fragment{{FirstState{s, ca_.bytemap_range()}}, {s}, false, NoAnchor};
     }
 
     Fragment Builder::repeat_frag(re2::Regexp *re, CounterId cnt) {
@@ -444,7 +486,7 @@ namespace CA::glushkov {
         switch (re->op()) {
             case re2::kRegexpNoMatch:
             case re2::kRegexpEmptyMatch:
-                return Fragment{{}, {}, true};
+                return Fragment{{}, {}, true, NoAnchor};
             case re2::kRegexpLiteral:
                 return lit_frag(re, cnt);
             case re2::kRegexpLiteralString:
@@ -470,11 +512,13 @@ namespace CA::glushkov {
             case re2::kRegexpCapture:
                 return compute_fragment(re->sub()[0], cnt);
             case re2::kRegexpBeginLine:
+            case re2::kRegexpBeginText:
+                return Fragment{{}, {}, false, StartAnchor | NoStartAlter};
             case re2::kRegexpEndLine:
+            case re2::kRegexpEndText:
+                return Fragment{{}, {}, false, EndAnchor | NoEndAlter};
             case re2::kRegexpWordBoundary:
             case re2::kRegexpNoWordBoundary:
-            case re2::kRegexpBeginText:
-            case re2::kRegexpEndText:
             default:
                 throw std::runtime_error("Use of unimplemented RegexpOp: "s
                         + std::to_string(re->op()) + " in get_eq()"s);

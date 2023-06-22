@@ -26,10 +26,17 @@ namespace CA::glushkov {
         Symbol byte_class;
     };
 
+    const uint8_t NoAnchor = 0;
+    const uint8_t StartAnchor = 1<<0;
+    const uint8_t EndAnchor = 1<<1;
+    const uint8_t NoStartAlter = 1<<2; // when there is only the anchor
+    const uint8_t NoEndAlter = 1<<3;
+
     struct Fragment {
         std::vector<FirstState> first;
         std::vector<StateId> last;
         bool nullable;
+        uint8_t anchor_flag;
     };
 
     class Builder {
