@@ -1,11 +1,15 @@
 #include "csa.hh"
 #include "re2/ca.hh"
 #include "re2/glushkov.hh"
+
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
+#include <map>
 
 namespace CSA {
 
@@ -209,7 +213,7 @@ Update TransBuilder::compute_update(CSA& csa) {
     return update;
 }
 
-GuardedTransBuilder::GuardedTransBuilder(CA::CA<uint8_t>& ca,
+GuardedTransBuilder::GuardedTransBuilder(CA::CA<uint8_t> const& ca,
         State const& state, uint8_t symbol) : TransBuilder(state.cnt_sets()),
         guards_(), guarded_states_(), guarded_lvals_(), guarded_resets_() {
     for (auto const& ca_state : state.normal()) {
@@ -232,7 +236,7 @@ GuardedTransBuilder::GuardedTransBuilder(CA::CA<uint8_t>& ca,
     }
 }
 
-void GuardedTransBuilder::add_cnt_state(CA::CA<uint8_t> &ca,
+void GuardedTransBuilder::add_cnt_state(CA::CA<uint8_t> const& ca,
         CounterState const &cnt_state, uint8_t symbol) {
     auto ca_state = cnt_state.state();
     auto& ca_transitions = ca.get_state(ca_state).transitions();
@@ -635,11 +639,13 @@ bool Matcher::match(string_view text) {
     for (char c : text) {
         if (!config_.step(c)) {
             config_.reset();
+            cerr << config_.csa_to_DOT() << std::endl;
             return false;
         }
     }
     bool res = config_.accepting();
     config_.reset();
+    cerr << config_.csa_to_DOT() << std::endl;
     return res;
 }
 
@@ -769,6 +775,104 @@ string Config::cnt_sets_to_str() const {
         str += std::to_string(i) + ": "s + cnt_sets_[i].to_str() + "\n"s;
     }
     return str;
+}
+
+std::string State::DOT_label(CSA const& csa) const {
+    string str = "N: "s;
+    map<unsigned, string> cnts;
+    for (auto state : normal_) {
+        str += to_string(state) + ", "s;
+    }
+    str += "| C: "s;
+    for (auto const& cnt_state : counter_) {
+        auto cnt = csa.ca().get_state(cnt_state.state()).cnt();
+        auto state = to_string(cnt_state.state());
+        str += state + ", "s;
+        for (auto index : cnt_state.actual()) {
+            if (cnts.find(index) == cnts.end()) {
+                cnts[index] += to_string(cnt) + ": "s + state;
+            } else {
+                cnts[index] += ", "s + state;
+            }
+        }
+        for (auto index : cnt_state.postponed()) {
+            if (cnts.find(index) == cnts.end()) {
+                cnts[index] += to_string(cnt) + ": "s + state + "+"s;
+            } else {
+                cnts[index] += ", "s + state + "+"s;
+            }
+        }
+    }
+    for (auto& [key, val] : cnts) {
+        (void)key;
+        str += "["s + val + "]"s;
+    }
+    return str;
+}
+
+string Update::DOT_label() const {
+    return to_str();
+}
+
+string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
+                     std::unordered_map<State, unsigned> &state_ids) const {
+    switch(type_) {
+        case TransEnum::WithoutCntState:
+        case TransEnum::EnteringCntState:
+            {
+                unsigned id;
+                if (state_ids.contains(next_state()->first)) {
+                    id = state_ids[next_state()->first];
+                } else {
+                    state_ids[next_state()->first] = id_cnt;
+                    id = id_cnt;
+                    id_cnt++;
+                }
+                return to_string(origin_id) + " -> " + to_string(id) + "[label=\"" + to_string(symbol) + "\"]\n";
+            }
+        case TransEnum::NoCondition:
+            {
+                unsigned id;
+                if (state_ids.contains(update()->next_state()->first)) {
+                    id = state_ids[update()->next_state()->first];
+                } else {
+                    state_ids[update()->next_state()->first] = id_cnt;
+                    id = id_cnt;
+                    id_cnt++;
+                }
+                return to_string(origin_id) + " -> " + to_string(id) + "[label=\"" + to_string(symbol) + "|" + update()->DOT_label() + "\"]\n";
+            }
+        case TransEnum::Small:
+        case TransEnum::Lazy:
+        case TransEnum::NotComputed:
+            break;
+    }
+    return ""s;
+}
+
+std::string CSA::to_DOT() const {
+    string str;
+    unsigned id_cnt{0};
+    std::unordered_map<State, unsigned> state_ids;
+    for (auto & state : states_) {
+        unsigned id;
+        if (state_ids.contains(state.first)) {
+            id = state_ids[state.first];
+        } else {
+            state_ids[state.first] = id_cnt;
+            id = id_cnt;
+            id_cnt++;
+        }
+        str += to_string(id) + "[label=\""s + state.first.DOT_label(*this) + "\"]\n"s;
+        for (unsigned i = 0; i < state.second.size(); i++) {
+            str += state.second[i].to_DOT(i, id, id_cnt, state_ids);
+        }
+    }
+    return str;
+}
+
+std::string Config::csa_to_DOT() const {
+    return csa_.to_DOT();
 }
 
 } // namespace CSA

@@ -102,6 +102,7 @@ namespace CSA {
 
     using CounterStateVec = OrdVector<CounterState>;
     using NormalStateVec = OrdVector<CA::StateId>;
+    class CSA;
 
     class State {
         public:
@@ -121,6 +122,7 @@ namespace CSA {
         }
 
         std::string to_str() const;
+        std::string DOT_label(CSA const& csa) const;
 
         private:
         NormalStateVec normal_;
@@ -357,6 +359,7 @@ namespace CSA {
         UpdateProg const& prog() const { return prog_; }
 
         std::string to_str() const;
+        std::string DOT_label() const;
 
         private:
         UpdateEnum type_;
@@ -367,9 +370,11 @@ namespace CSA {
     using UpdateVec = std::vector<Update>;
 
     struct Guard {
+        std::string DOT_label() const;
         CA::StateId state;
         CA::Guard condition;
     };
+
     
     enum class TransEnum {
         NotComputed,
@@ -395,14 +400,14 @@ namespace CSA {
         GuardVec const& guards() const { return guards_; }
         Update const& update(unsigned index) const { return updates_[index]; }
 
+        //std::string to_DOT(uint32_t origin_id) const;
+
         private:
         GuardVec guards_;
         UpdateVec updates_;
     };
 
     using UpdateCache = std::unordered_map<uint64_t, Update>;
-
-    class CSA;
 
     class TransBuilder {
         public:
@@ -427,6 +432,7 @@ namespace CSA {
         }
 
         std::string to_str() const;
+        std::string to_DOT(uint32_t origin_id) const;
 
         private:
         OrdVector<OrdVector<CA::StateId>> compute_state_idexes(CSA& csa, Update& update);
@@ -440,10 +446,10 @@ namespace CSA {
 
     class GuardedTransBuilder : public TransBuilder {
         public:
-        GuardedTransBuilder(CA::CA<uint8_t> &ca, State const &state,
+        GuardedTransBuilder(CA::CA<uint8_t> const& ca, State const &state,
                 uint8_t symbol);
 
-        void add_cnt_state(CA::CA<uint8_t> &ca, CounterState const &cnt_state,
+        void add_cnt_state(CA::CA<uint8_t> const& ca, CounterState const &cnt_state,
                 uint8_t symbol);
         GuardVec const &guards() const { return guards_; }
         TransEnum trans_type() const;
@@ -472,6 +478,8 @@ namespace CSA {
         Update const &update(unsigned index,
                              std::vector<bool> const &sat_guards, CSA &csa);
 
+        std::string to_DOT(uint32_t origin_id) const;
+
       private:
         GuardedTransBuilder builder_;
         UpdateCache cache_;
@@ -494,10 +502,14 @@ namespace CSA {
             return next_state_; 
         }
         Update* update() { assert(type_ == TransEnum::NoCondition); return update_; }
+        Update const* update() const { assert(type_ == TransEnum::NoCondition); return update_; }
         SmallTrans* small() { assert(type_ == TransEnum::Small); return small_; }
         LazyTrans* lazy() { assert(type_ == TransEnum::Lazy); return lazy_; }
 
         std::string to_str() const;
+
+        std::string to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
+                std::unordered_map<State, unsigned> &state_ids) const;
 
         ~Trans();
 
@@ -521,9 +533,11 @@ namespace CSA {
         CSA(CA::CA<uint8_t> &&ca) : ca_(std::move(ca)), states_() {}
 
         CachedState* get_state(State state);
-        CA::CA<uint8_t> & ca() { return ca_; }
+        CA::CA<uint8_t> const& ca() const { return ca_; }
 
         std::string to_str() const;
+
+        std::string to_DOT() const;
 
         private:
         CA::CA<uint8_t> ca_;
@@ -543,6 +557,8 @@ namespace CSA {
         void reset() { cur_state_ = init_state_; cnt_sets_.resize(0); }
         bool step(uint8_t c); // true if there is still chance to match
         bool accepting();
+
+        std::string csa_to_DOT() const;
 
         private:
         bool eval_guard(CA::Guard guard, CounterState const& cnt_state);

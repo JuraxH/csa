@@ -206,6 +206,12 @@ namespace CA {
             return states_[id]; 
         }
 
+        [[nodiscard]] State const& get_state(StateId id) const { 
+            assert(id < states_.size()); 
+
+            return states_[id]; 
+        }
+
         [[nodiscard]] StateId add_state(CounterId cnt=0) { 
             assert(cnt <= counters_.size()); 
 
@@ -216,6 +222,12 @@ namespace CA {
         [[nodiscard]] State& get_init() { return get_state(InitState); } 
 
         [[nodiscard]] Counter& get_counter(CounterId id) { 
+            assert(id - 1 < counters_.size());
+
+            return counters_[id-1]; 
+        }
+
+        [[nodiscard]] Counter const& get_counter(CounterId id) const { 
             assert(id - 1 < counters_.size());
 
             return counters_[id-1]; 
