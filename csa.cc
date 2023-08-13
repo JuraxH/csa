@@ -2,6 +2,7 @@
 #include "re2/ca.hh"
 #include "re2/glushkov.hh"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -790,14 +791,14 @@ std::string State::DOT_label(CSA const& csa) const {
         str += state + ", "s;
         for (auto index : cnt_state.actual()) {
             if (cnts.find(index) == cnts.end()) {
-                cnts[index] += to_string(cnt) + ": "s + state;
+                cnts[index] += to_string(cnt) + ";"s + to_string(index) + ": "s + state;
             } else {
                 cnts[index] += ", "s + state;
             }
         }
         for (auto index : cnt_state.postponed()) {
             if (cnts.find(index) == cnts.end()) {
-                cnts[index] += to_string(cnt) + ": "s + state + "+"s;
+                cnts[index] += to_string(cnt) + ";"s + to_string(index) + ": "s + state + "+"s;
             } else {
                 cnts[index] += ", "s + state + "+"s;
             }
@@ -811,7 +812,23 @@ std::string State::DOT_label(CSA const& csa) const {
 }
 
 string Update::DOT_label() const {
-    return to_str();
+    string str;
+    switch(type_) {
+        case UpdateEnum::Out:
+            return "OUT"s;
+        case UpdateEnum::Noop:
+            return "NOOP"s;
+        case UpdateEnum::KeepSets:
+            str += "KeepSets:\n"s;
+            break;
+        case UpdateEnum::NewSets:
+            str += "NewSets:\n"s;
+            break;
+    }
+    for (auto const&inst : prog_) {
+        str += '\t' + inst.to_str() + '\n';
+    }
+    return str;
 }
 
 string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
@@ -820,6 +837,7 @@ string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
         case TransEnum::WithoutCntState:
         case TransEnum::EnteringCntState:
             {
+                if (next_state()->first.dead()) { return ""s; }
                 unsigned id;
                 if (state_ids.contains(next_state()->first)) {
                     id = state_ids[next_state()->first];
@@ -832,6 +850,7 @@ string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
             }
         case TransEnum::NoCondition:
             {
+                if (update()->next_state()->first.dead()) { return ""s; }
                 unsigned id;
                 if (state_ids.contains(update()->next_state()->first)) {
                     id = state_ids[update()->next_state()->first];
@@ -843,18 +862,98 @@ string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
                 return to_string(origin_id) + " -> " + to_string(id) + "[label=\"" + to_string(symbol) + "|" + update()->DOT_label() + "\"]\n";
             }
         case TransEnum::Small:
+            return this->small_->to_DOT(symbol, origin_id, id_cnt, state_ids);
         case TransEnum::Lazy:
+            return this->lazy_->to_DOT(symbol, origin_id, id_cnt, state_ids);
+            assert(false);
         case TransEnum::NotComputed:
             break;
     }
     return ""s;
 }
 
+std::string LazyTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
+        std::unordered_map<State, unsigned> &state_ids) const {
+    std::vector<uint32_t> eval(guards().size(), 0);
+    std::string graph;
+    for (auto const& [key, val] : cache_) {
+        if (val.next_state()->first.dead()) { continue; }
+        for (size_t j = 0; j < guards().size(); j++) {
+            size_t d = guards().size() - j - 1; // the order of bits is descending
+            if (key & (1<<d)) {
+                eval[j] = 1;
+            } else {
+                eval[j] = 0;
+            }
+        }
+        Update const& update = val;
+        unsigned target_id;
+        if (state_ids.contains(update.next_state()->first)) {
+            target_id = state_ids[update.next_state()->first];
+        } else {
+            state_ids[update.next_state()->first] = id_cnt;
+            target_id = id_cnt;
+            id_cnt++;
+        }
+        graph += to_string(origin_id) + " -> " + to_string(target_id) + "[label=\"" + to_string(symbol) + "|";
+        for (size_t j = 0; j < guards().size(); j++) {
+            graph += guard_to_string(guards()[j].condition) 
+                + "["s + to_string(guards()[j].state) + "]:"s;
+            if (eval[j]) {
+                graph += "T, "s;
+            } else {
+                graph += "F, "s;
+            }
+        }
+        graph += "|"s + update.DOT_label() + "\"]\n";
+    }
+    return graph;
+}
+
+std::string SmallTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
+        std::unordered_map<State, unsigned> &state_ids) const {
+    std::vector<uint32_t> eval(guards_.size(), 0);
+    std::string graph;
+    for (size_t i = 0; i < ((size_t)1<<guards_.size()); i++) {
+        if (updates_[i].next_state()->first.dead()) { continue; }
+        for (size_t j = 0; j < guards_.size(); j++) {
+            size_t d = guards_.size() - j - 1; // the order of bits is descending
+            if (i & (1<<d)) {
+                eval[j] = 1;
+            } else {
+                eval[j] = 0;
+            }
+        }
+        Update const& update = updates_[i];
+        unsigned target_id;
+        if (state_ids.contains(update.next_state()->first)) {
+            target_id = state_ids[update.next_state()->first];
+        } else {
+            state_ids[update.next_state()->first] = id_cnt;
+            target_id = id_cnt;
+            id_cnt++;
+        }
+        graph += to_string(origin_id) + " -> " + to_string(target_id) + "[label=\"" + to_string(symbol) + "|";
+        for (size_t j = 0; j < guards_.size(); j++) {
+            graph += guard_to_string(guards_[j].condition) 
+                  + "["s + to_string(guards_[j].state) + "]:"s;
+            if (eval[j]) {
+                graph += "T, "s;
+            } else {
+                graph += "F, "s;
+            }
+        }
+        graph += "|"s + update.DOT_label() + "\"]\n";
+    }
+    return graph;
+}
+
 std::string CSA::to_DOT() const {
-    string str;
+    string str = "digraph CSA {\n"s;
     unsigned id_cnt{0};
     std::unordered_map<State, unsigned> state_ids;
     for (auto & state : states_) {
+        if (state.first.dead()) { continue; }
         unsigned id;
         if (state_ids.contains(state.first)) {
             id = state_ids[state.first];
@@ -868,7 +967,7 @@ std::string CSA::to_DOT() const {
             str += state.second[i].to_DOT(i, id, id_cnt, state_ids);
         }
     }
-    return str;
+    return str + "}\n"s;
 }
 
 std::string Config::csa_to_DOT() const {

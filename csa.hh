@@ -121,6 +121,8 @@ namespace CSA {
                 && counter_ == other.counter_;
         }
 
+        bool dead() const { return normal_.empty() && counter_.empty(); }
+
         std::string to_str() const;
         std::string DOT_label(CSA const& csa) const;
 
@@ -400,9 +402,10 @@ namespace CSA {
         GuardVec const& guards() const { return guards_; }
         Update const& update(unsigned index) const { return updates_[index]; }
 
-        //std::string to_DOT(uint32_t origin_id) const;
+        std::string to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
+               std::unordered_map<State, unsigned> &state_ids) const;
 
-        private:
+      private:
         GuardVec guards_;
         UpdateVec updates_;
     };
@@ -478,7 +481,8 @@ namespace CSA {
         Update const &update(unsigned index,
                              std::vector<bool> const &sat_guards, CSA &csa);
 
-        std::string to_DOT(uint32_t origin_id) const;
+        std::string to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
+               std::unordered_map<State, unsigned> &state_ids) const;
 
       private:
         GuardedTransBuilder builder_;
