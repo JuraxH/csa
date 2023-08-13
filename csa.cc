@@ -791,14 +791,14 @@ std::string State::DOT_label(CSA const& csa) const {
         str += state + ", "s;
         for (auto index : cnt_state.actual()) {
             if (cnts.find(index) == cnts.end()) {
-                cnts[index] += to_string(cnt) + ";"s + to_string(index) + ": "s + state;
+                cnts[index] += "C_"s + to_string(cnt) + ";"s + to_string(index) + ": "s + state;
             } else {
                 cnts[index] += ", "s + state;
             }
         }
         for (auto index : cnt_state.postponed()) {
             if (cnts.find(index) == cnts.end()) {
-                cnts[index] += to_string(cnt) + ";"s + to_string(index) + ": "s + state + "+"s;
+                cnts[index] += "C_"s + to_string(cnt) + ";"s + to_string(index) + ": "s + state + "+"s;
             } else {
                 cnts[index] += ", "s + state + "+"s;
             }
@@ -808,7 +808,30 @@ std::string State::DOT_label(CSA const& csa) const {
         (void)key;
         str += "["s + val + "]"s;
     }
-    return str;
+
+    str += "\nF: "s;
+    // TODO: final condition
+    // first traverse normal states if true is found, then end
+    for (auto const& state : normal_) {
+        if (csa.ca().get_state(state).final() == CA::Guard::True) {
+            return str + "True"s;
+        }
+    }
+    // traverse counter states if any condition is found add it to final
+    std::string conditions;
+    for (auto const& state : counter_) {
+        auto const& ca_state = csa.ca().get_state(state.state());
+        if (ca_state.final() == CA::Guard::True) {
+            return str + "True"s;
+        } else if (ca_state.final() == CA::Guard::CanExit) {
+            conditions += "["s + to_string(state.state()) + "] >= "s + to_string(csa.ca().get_counter(ca_state.cnt()).max())+ ", "s;
+        }
+    }
+    if (!conditions.empty()) {
+        return str + conditions;
+    } 
+    // else false
+    return str + "False"s;
 }
 
 string Update::DOT_label() const {
@@ -962,7 +985,7 @@ std::string CSA::to_DOT() const {
             id = id_cnt;
             id_cnt++;
         }
-        str += to_string(id) + "[label=\""s + state.first.DOT_label(*this) + "\"]\n"s;
+        str += to_string(id) + "[shape=\"box\", label=\""s + state.first.DOT_label(*this) + "\"]\n"s;
         for (unsigned i = 0; i < state.second.size(); i++) {
             str += state.second[i].to_DOT(i, id, id_cnt, state_ids);
         }
