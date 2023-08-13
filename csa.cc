@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <map>
 
@@ -809,7 +810,7 @@ std::string State::DOT_label(CSA const& csa) const {
         str += "["s + val + "]"s;
     }
 
-    str += "\nF: "s;
+    str += "\\nF: "s;
     // TODO: final condition
     // first traverse normal states if true is found, then end
     for (auto const& state : normal_) {
@@ -855,7 +856,8 @@ string Update::DOT_label() const {
 }
 
 string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
-                     std::unordered_map<State, unsigned> &state_ids) const {
+                     std::unordered_map<State, unsigned> &state_ids,
+                     std::unordered_map<uint8_t, std::string> &byte_dbg) const {
     switch(type_) {
         case TransEnum::WithoutCntState:
         case TransEnum::EnteringCntState:
@@ -869,7 +871,7 @@ string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
                     id = id_cnt;
                     id_cnt++;
                 }
-                return to_string(origin_id) + " -> " + to_string(id) + "[label=\"" + to_string(symbol) + "\"]\n";
+                return to_string(origin_id) + " -> " + to_string(id) + "[label=\"" + byte_dbg[symbol] + "\"]\n";
             }
         case TransEnum::NoCondition:
             {
@@ -882,12 +884,12 @@ string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
                     id = id_cnt;
                     id_cnt++;
                 }
-                return to_string(origin_id) + " -> " + to_string(id) + "[label=\"" + to_string(symbol) + "|" + update()->DOT_label() + "\"]\n";
+                return to_string(origin_id) + " -> " + to_string(id) + "[label=\"" + byte_dbg[symbol] + "|" + update()->DOT_label() + "\"]\n";
             }
         case TransEnum::Small:
-            return this->small_->to_DOT(symbol, origin_id, id_cnt, state_ids);
+            return this->small_->to_DOT(symbol, origin_id, id_cnt, state_ids, byte_dbg);
         case TransEnum::Lazy:
-            return this->lazy_->to_DOT(symbol, origin_id, id_cnt, state_ids);
+            return this->lazy_->to_DOT(symbol, origin_id, id_cnt, state_ids, byte_dbg);
             assert(false);
         case TransEnum::NotComputed:
             break;
@@ -896,7 +898,8 @@ string Trans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
 }
 
 std::string LazyTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
-        std::unordered_map<State, unsigned> &state_ids) const {
+        std::unordered_map<State, unsigned> &state_ids,
+        std::unordered_map<uint8_t, std::string> &byte_dbg) const {
     std::vector<uint32_t> eval(guards().size(), 0);
     std::string graph;
     for (auto const& [key, val] : cache_) {
@@ -918,7 +921,7 @@ std::string LazyTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_c
             target_id = id_cnt;
             id_cnt++;
         }
-        graph += to_string(origin_id) + " -> " + to_string(target_id) + "[label=\"" + to_string(symbol) + "|";
+        graph += to_string(origin_id) + " -> " + to_string(target_id) + "[label=\"" + byte_dbg[symbol] + "|";
         for (size_t j = 0; j < guards().size(); j++) {
             graph += guard_to_string(guards()[j].condition) 
                 + "["s + to_string(guards()[j].state) + "]:"s;
@@ -934,7 +937,8 @@ std::string LazyTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_c
 }
 
 std::string SmallTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
-        std::unordered_map<State, unsigned> &state_ids) const {
+        std::unordered_map<State, unsigned> &state_ids, 
+        std::unordered_map<uint8_t, std::string> &byte_dbg) const {
     std::vector<uint32_t> eval(guards_.size(), 0);
     std::string graph;
     for (size_t i = 0; i < ((size_t)1<<guards_.size()); i++) {
@@ -956,7 +960,7 @@ std::string SmallTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_
             target_id = id_cnt;
             id_cnt++;
         }
-        graph += to_string(origin_id) + " -> " + to_string(target_id) + "[label=\"" + to_string(symbol) + "|";
+        graph += to_string(origin_id) + " -> " + to_string(target_id) + "[label=\"" + byte_dbg[symbol] + "|";
         for (size_t j = 0; j < guards_.size(); j++) {
             graph += guard_to_string(guards_[j].condition) 
                   + "["s + to_string(guards_[j].state) + "]:"s;
@@ -972,6 +976,7 @@ std::string SmallTrans::to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_
 }
 
 std::string CSA::to_DOT() const {
+    std::unordered_map<uint8_t, std::string> byte_dbg = ca_.bytemap_debug();
     string str = "digraph CSA {\n"s;
     unsigned id_cnt{0};
     std::unordered_map<State, unsigned> state_ids;
@@ -987,14 +992,163 @@ std::string CSA::to_DOT() const {
         }
         str += to_string(id) + "[shape=\"box\", label=\""s + state.first.DOT_label(*this) + "\"]\n"s;
         for (unsigned i = 0; i < state.second.size(); i++) {
-            str += state.second[i].to_DOT(i, id, id_cnt, state_ids);
+            str += state.second[i].to_DOT(i, id, id_cnt, state_ids, byte_dbg);
         }
     }
+    str += "start[style=invis]\nstart -> "s + to_string(state_ids[InitialState]) + "[color=\"red\"]\n"s;
     return str + "}\n"s;
 }
 
 std::string Config::csa_to_DOT() const {
     return csa_.to_DOT();
+}
+
+class CSATraverseState {
+    public:
+    CSATraverseState(CSA & csa) : to_visit(), visited(), cur_state_(nullptr), csa_(csa) {
+        to_visit.insert(csa.get_state(InitialState)->first);
+    }
+
+    bool keep_going() const { return !to_visit.empty(); }
+    void compute_full_trans(Trans& trans, uint8_t byte_class) {
+        if (cur_state_->first.counter().empty()) {
+            NormalStateVec normal;
+            CounterStateVec counter;
+            CountersToReset reset;
+            for (auto ca_state : cur_state_->first.normal()) {
+                auto& ca_transitions = csa_.ca().get_state(ca_state).transitions();
+                for (auto& ca_trans : ca_transitions) {
+                    if (ca_trans.symbol() != byte_class 
+                            && ca_trans.symbol() != csa_.ca().bytemap_range()) {
+                        continue;
+                    }
+                    if (ca_trans.op() == CA::Operator::Noop) {
+                        normal.insert(ca_trans.target());
+                    } else {
+                        assert(ca_trans.op() == CA::Operator::Rst);
+                        counter.insert(CounterState(ca_trans.target()));
+                        reset.add_state(ca_trans.target(), 
+                                csa_.ca().get_state(ca_trans.target()).cnt());
+                    }
+                }
+            }
+            if (counter.empty()) {
+                State state(std::move(normal), std::move(counter), 0);
+                trans.set_next_state(csa_.get_state(std::move(state)), TransEnum::WithoutCntState);
+            } else {
+                auto names = reset.get_cnt_set_names();
+                auto it = names.begin();
+                for (unsigned i = 0; i < names.size(); ++i, ++it) {
+                    for (auto state : *it) {
+                        counter.find(CounterState(state))->actual().insert(i);
+                    }
+                }
+                State state(std::move(normal), std::move(counter), names.size());
+                trans.set_next_state(csa_.get_state(std::move(state)), TransEnum::EnteringCntState);
+            }
+        } else {
+            GuardedTransBuilder builder(csa_.ca(), cur_state_->first, byte_class);
+            switch (builder.trans_type()) {
+                case TransEnum::NoCondition:
+                    trans.set_update(builder.no_condition(csa_));
+                    break;
+                case TransEnum::Small:
+                    trans.set_small(builder.small(csa_));
+                    break;
+                case TransEnum::Lazy:
+                    trans.set_lazy(new LazyTrans(std::move(builder)));
+                    break;
+                default:
+                    FATAL_ERROR("unexpected trans type of builder", Errors::InternalFailure);
+            }
+        }
+    }
+
+    void add_state(State const& state) {
+        if (!state.dead() && !visited.contains(state)) {
+            to_visit.insert(state);
+        }
+    }
+
+    void collect_next_states(Trans &trans, uint8_t symbol) {
+        switch (trans.type()) {
+            case TransEnum::WithoutCntState:
+                add_state(trans.next_state()->first);
+                break;
+            case TransEnum::EnteringCntState:
+                add_state(trans.next_state()->first);
+                break;
+            case TransEnum::NoCondition:
+                add_state(trans.update()->next_state()->first);
+                break;
+            case TransEnum::Small:
+                for (auto &update : trans.small()->updates()) {
+                    add_state(update.next_state()->first);
+                }
+                break;
+            case TransEnum::Lazy:
+            {
+                auto & lazy = *trans.lazy();
+                auto const& guards = lazy.guards();
+                std::vector<bool> eval(guards.size(), 0);
+                std::string graph;
+                for (size_t i = 0; i < ((size_t)1<<guards.size()); i++) {
+                    for (size_t j = 0; j < guards.size(); j++) {
+                        size_t d = guards.size() - j - 1; // the order of bits is descending
+                        if (i & (1<<d)) {
+                            eval[j] = true;
+                        } else {
+                            eval[j] = false;
+                        }
+                        auto const& update = trans.lazy()->update(i, eval, csa_);
+                        add_state(update.next_state()->first);
+                    }
+                }
+            }
+                break;
+            case TransEnum::NotComputed:
+                assert(false);
+        }
+    }
+
+    void run() {
+        while (keep_going()) {
+            cur_state_ = csa_.get_state(*to_visit.begin());
+            to_visit.erase(to_visit.begin());
+            visited.insert(cur_state_->first);
+            for (uint8_t i = 0; i < csa_.ca().bytemap_range(); i++) {
+                compute_full_trans(cur_state_->second[i], i);
+                collect_next_states(cur_state_->second[i], i);
+            }
+        }
+    }
+
+    private:
+    CSA& csa_;
+    std::unordered_set<State> to_visit;
+    std::unordered_set<State> visited;
+    CachedState* cur_state_;
+};
+
+void CSA::compute_full() {
+    auto state = CSATraverseState(*this);
+    state.run();
+}
+
+Visualizer::Visualizer(std::string_view pattern)
+    : pattern_(pattern), csa_(CA::glushkov::Builder::get_ca(pattern)) { }
+
+std::string Visualizer::to_DOT_CSA() {
+    static bool computed = false;
+    if (!computed) {
+        csa_.compute_full();
+    }
+    computed = true;
+    return csa_.to_DOT();
+}
+
+std::string Visualizer::to_DOT_CA() {
+    return csa_.ca().to_DOT([] (auto sym) {return std::to_string(sym);});
 }
 
 } // namespace CSA

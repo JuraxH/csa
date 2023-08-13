@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <cassert>
@@ -267,6 +268,45 @@ namespace CA {
                 }
             }
             return str;
+        }
+
+        [[nodiscard]] std::unordered_map<uint8_t, string> bytemap_debug() const {
+            std::unordered_map<uint8_t, std::vector<std::pair<uint8_t, uint8_t>>> map;
+            uint8_t cur_val = bytemap_[0];
+            uint8_t cur_start = 0;
+            for (size_t i = 0; i < 256; ++i) {
+                uint8_t val = bytemap_[i];
+                if (cur_val != val) {
+                    map[cur_val].push_back({cur_start, static_cast<uint8_t>(i - 1)});
+                    cur_val = val;
+                    cur_start = static_cast<uint8_t>(i);
+                } 
+            }
+            map[cur_val].push_back({cur_start, static_cast<uint8_t>(255)});
+            std::unordered_map<uint8_t, string> res;
+            auto to_str = [] (uint8_t val) {
+                if (static_cast<size_t>('"') == val) {
+                    return "\\\"\\\"\\\""s;
+                } else if (static_cast<size_t>('\\') == val) {
+                    return "\\\\"s;
+                } else if (static_cast<size_t>('!') <= val && static_cast<size_t>('~') >= val) {
+                    return "\\\""s + string(1, static_cast<char>(val)) + "\\\""s;
+                } else {
+                    return std::to_string(val);
+                }
+            };
+            for (auto& [val, ranges] : map) {
+                string str = "["s;
+                for (auto& [start, end] : ranges) {
+                    if (start == end) {
+                        str += to_str(start);
+                    } else {
+                        str += to_str(start) + "-"s + to_str(end);
+                    }
+                }
+                res[val] = str + "]"s;
+            }
+            return res;
         }
 
         [[nodiscard]] string to_string() const {

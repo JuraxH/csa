@@ -27,6 +27,14 @@ void print_char_class(re2::CharClass *cc) {
 }
 
 int main(int argc, char **argv) {
+    if (argc < 2) {
+        cerr << "missing pattern argument\n";
+        return 1;
+    }
+    CSA::Visualizer vis(argv[1]);
+    cout << vis.to_DOT_CSA() << "\n"s;
+
+#if 0
     if (argc < 3) {
         cerr << "missing pattern argument\n";
         return 1;
@@ -36,6 +44,7 @@ int main(int argc, char **argv) {
         cout << "match\n";
     else 
         cout << "no match\n";
+#endif
     //auto b = glushkov::Builder::get_ca(argv[1]);
     //cout << b.to_DOT([] (auto sym) {return std::to_string(sym);}) << "\n"s;
     //auto b = Builder("[^©-®]");

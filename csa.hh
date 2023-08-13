@@ -109,6 +109,8 @@ namespace CSA {
         State(NormalStateVec &&normal, CounterStateVec &&counter, unsigned cnt_sets) :
             normal_(std::move(normal)), counter_(std::move(counter)), cnt_sets_(cnt_sets) {};
 
+        State(State const& other) = default;
+
         NormalStateVec & normal() { return normal_; }
         CounterStateVec & counter() { return counter_; }
 
@@ -401,9 +403,11 @@ namespace CSA {
         void add_update(Update&& update) { updates_.push_back(std::move(update)); }
         GuardVec const& guards() const { return guards_; }
         Update const& update(unsigned index) const { return updates_[index]; }
+        UpdateVec & updates() { return updates_; }
 
         std::string to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
-               std::unordered_map<State, unsigned> &state_ids) const;
+                std::unordered_map<State, unsigned> &state_ids,
+                std::unordered_map<uint8_t, std::string> &byte_dbg) const;
 
       private:
         GuardVec guards_;
@@ -482,7 +486,8 @@ namespace CSA {
                              std::vector<bool> const &sat_guards, CSA &csa);
 
         std::string to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
-               std::unordered_map<State, unsigned> &state_ids) const;
+                std::unordered_map<State, unsigned> &state_ids,
+                std::unordered_map<uint8_t, std::string> &byte_dbg) const;
 
       private:
         GuardedTransBuilder builder_;
@@ -513,7 +518,8 @@ namespace CSA {
         std::string to_str() const;
 
         std::string to_DOT(uint8_t symbol, uint32_t origin_id, unsigned &id_cnt,
-                std::unordered_map<State, unsigned> &state_ids) const;
+                std::unordered_map<State, unsigned> &state_ids,
+                std::unordered_map<uint8_t, std::string> &byte_dbg) const;
 
         ~Trans();
 
@@ -539,9 +545,10 @@ namespace CSA {
         CachedState* get_state(State state);
         CA::CA<uint8_t> const& ca() const { return ca_; }
 
+        // for debugging
         std::string to_str() const;
-
         std::string to_DOT() const;
+        void compute_full();
 
         private:
         CA::CA<uint8_t> ca_;
@@ -587,6 +594,18 @@ namespace CSA {
 
         private:
         Config config_;
+    };
+
+    class Visualizer {
+        public:
+        Visualizer(std::string_view pattern);
+        std::string to_DOT_CSA();
+        
+        std::string to_DOT_CA();
+
+        private:
+        std::string pattern_;
+        CSA csa_;
     };
 
 } // namespace CSA
