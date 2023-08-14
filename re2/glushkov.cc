@@ -1,6 +1,8 @@
 #include "re2/glushkov.hh"
 #include "ca.hh"
 #include "glushkov.hh"
+#include "csa_errors.hh"
+
 #include <algorithm>
 #include <cstdint>
 #include <iterator>
@@ -275,7 +277,7 @@ namespace CA::glushkov {
             int rune = re->runes()[i];
             int len = re2::runetochar(chars + base, &rune);
             if (len == 0) {
-                throw std::runtime_error("runetochar failed");
+                FATAL_ERROR("rune to char failed", CSA::Errors::InvalidUtf8);
             }
             for (auto j = 0; j < len; j++) {
                 auto s = ca_.add_state(cnt);
@@ -461,7 +463,7 @@ namespace CA::glushkov {
             return plus_frag(re, cnt);
         } else {
             if (cnt != 0) {
-                throw std::logic_error("Nested repetition not supported");
+                FATAL_ERROR("Nested repetition not supported", CSA::Errors::NestedRepetition);
             }
             CounterId new_cnt = ca_.add_counter(Counter(re->min(), re->max()));
             Fragment frag = compute_fragment(re->sub()[0], new_cnt);
@@ -502,7 +504,7 @@ namespace CA::glushkov {
                 return plus_frag(re, cnt);
             case re2::kRegexpQuest:
                 return quest_frag(re, cnt);
-            case re2::kRegexpAnyChar: // TODO: support for multibyte bytes
+            case re2::kRegexpAnyChar:
                 return any_char_frag(cnt);
             case re2::kRegexpAnyByte:
                 return any_byte_frag(cnt);
@@ -519,8 +521,7 @@ namespace CA::glushkov {
             case re2::kRegexpWordBoundary:
             case re2::kRegexpNoWordBoundary:
             default:
-                throw std::runtime_error("Use of unimplemented RegexpOp: "s
-                        + std::to_string(re->op()) + " in get_eq()"s);
+                FATAL_ERROR("Use of unsupported RegexpOp: "s + std::to_string(re->op()) + "in get_eq()"s, CSA::Errors::UnsupportedOperation);
         }
     }
 } // namespace CA::glushkov

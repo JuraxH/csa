@@ -10,6 +10,7 @@
 
 #include "re2/ca.hh"
 #include "util/ord_vector.hh"
+#include "csa_errors.hh"
 
 
 // log options: conditions, cnt_sets, config,
@@ -52,19 +53,7 @@
 #define LOG_BUILDER(builder) 
 #endif
 
-
-#define FATAL_ERROR(msg, err) do {\
-    std::cerr << "Error:" << __FILE__ << ":" << __LINE__ << ": " << __func__ << ": " \
-        << msg << std::endl; \
-    exit(static_cast<int>(err));} while(false)
-
-
 namespace CSA {
-
-    enum class Errors {
-        DoubleIncr = 10,
-        InternalFailure = 11
-    };
 
     template<typename T>
     using OrdVector = Mata::Util::OrdVector<T>;

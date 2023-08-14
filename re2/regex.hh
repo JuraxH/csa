@@ -8,6 +8,7 @@
 #include "re2/re2.h"
 #include "re2/regexp.h"
 #include "re2/prog.h"
+#include "csa_errors.hh"
 
 
 namespace re2::regex {
@@ -20,12 +21,12 @@ namespace re2::regex {
                     static_cast<re2::Regexp::ParseFlags>(options_.ParseFlags()), 
                     nullptr);
             if (regexp_ == nullptr) {
-                throw std::runtime_error("Parsing of regex failed");
+                FATAL_ERROR("Parsing of regex failed", CSA::Errors::FailedToParse);
             }
 
             prog_ = regexp_->CompileToProg(options_.max_mem() * 2 / 3);
             if (prog_ == nullptr) {
-                throw std::runtime_error("Building of bytemap failed");
+                FATAL_ERROR("Building of bytemap failed", CSA::Errors::FailedToParse);
             }
 
             bytemap_range_ = prog_->bytemap_range();
