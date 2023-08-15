@@ -641,13 +641,11 @@ bool Matcher::match(string_view text) {
     for (char c : text) {
         if (!config_.step(c)) {
             config_.reset();
-            cerr << config_.csa_to_DOT() << std::endl;
             return false;
         }
     }
     bool res = config_.accepting();
     config_.reset();
-    cerr << config_.csa_to_DOT() << std::endl;
     return res;
 }
 
