@@ -16,6 +16,7 @@ namespace CSA {
         UnsupportedOperation = 13,
         InvalidUtf8 = 14,
         FailedToParse = 15,
+        WeirdAnchor = 16,
     };
 
 } // namespace CSA

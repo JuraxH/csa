@@ -305,7 +305,11 @@ namespace CA::glushkov {
             Fragment sub_frag = compute_fragment(subs[i], cnt);
             if (sub_frag.anchor_flag) {
                 if (sub_frag.anchor_flag & StartAnchor) {
-                    assert(i == 0 && re->nsub() > 1);
+                    // TODO: check if this is correct
+                    if (!(i == 0 && re->nsub() > 1)) {
+                        FATAL_ERROR("start anchor not at the beginning of the regexp", CSA::Errors::WeirdAnchor);
+                    }
+                    //assert(i == 0 && re->nsub() > 1);
                     front_anchor = true;
                     if (sub_frag.anchor_flag & NoStartAlter) {
                         sub_frag.nullable = true;
@@ -324,7 +328,11 @@ namespace CA::glushkov {
                         ca_.get_state(last).set_final(ca_.get_counters());
                     }
                     if (sub_frag.anchor_flag & NoEndAlter) {
-                        assert(i != 0 && i + 1 == re->nsub());
+                        // TODO: check if this is correct
+                        if (!(i != 0 && i + 1 == re->nsub())) {
+                            FATAL_ERROR("end anchor not at the end of the regexp", CSA::Errors::WeirdAnchor);
+                        }
+                        //assert(i != 0 && i + 1 == re->nsub());
                         frag.last.clear();
                     }
                 }
