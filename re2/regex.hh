@@ -23,11 +23,16 @@ namespace re2::regex {
             if (regexp_ == nullptr) {
                 FATAL_ERROR("Parsing of regex failed", CSA::Errors::FailedToParse);
             }
+            std::vector<std::pair<int, int>> cnts;
+            size_t cnt_id = 0;
+            regexp_->minimize_counters(cnts, cnt_id);
 
             prog_ = regexp_->CompileToProg(options_.max_mem() * 2 / 3);
             if (prog_ == nullptr) {
                 FATAL_ERROR("Building of bytemap failed", CSA::Errors::FailedToParse);
             }
+            cnt_id = 0;
+            regexp_->return_counters(cnts, cnt_id);
 
             bytemap_range_ = prog_->bytemap_range();
             bytemap_ = prog_->bytemap();

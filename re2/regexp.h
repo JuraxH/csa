@@ -91,6 +91,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "util/util.h"
 #include "util/logging.h"
@@ -324,6 +325,10 @@ class Regexp {
     else
       return submany_;
   }
+
+  // counter manipulation to improve construction of bytemap for large counters
+  void minimize_counters(std::vector<std::pair<int, int>>& cnts, size_t& cnt_id);
+  void return_counters(std::vector<std::pair<int, int>>& cnts, size_t& cnt_id);
 
   // temporary helper function for construction of CA
   void null_loop() { DCHECK_EQ(op_, kRegexpRepeat); min_ = 0; }

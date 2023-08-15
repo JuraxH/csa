@@ -7,6 +7,7 @@
 
 #include "re2/regexp.h"
 
+#include <cassert>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -22,6 +23,36 @@
 #include "re2/pod_array.h"
 
 namespace re2 {
+
+void Regexp::minimize_counters(std::vector<std::pair<int, int>>& cnts, size_t& cnt_id) {
+    if (op() == kRegexpRepeat) {
+        cnts.push_back(std::make_pair(min(), max()));
+        cnt_id++;
+        if (max() > 1 || max() == -1) {
+            if (min() != 0) {
+                min_ = 1;
+            }
+            if (max() != -1) {
+                max_ = 2;
+            }
+        }
+    }
+    for (int i = 0; i < nsub(); i++) {
+        sub()[i]->minimize_counters(cnts, cnt_id);
+    }
+}
+
+void Regexp::return_counters(std::vector<std::pair<int, int>>& cnts, size_t& cnt_id) {
+    if (op() == kRegexpRepeat) {
+        assert(cnt_id < cnts.size());
+        min_ = cnts[cnt_id].first;
+        max_ = cnts[cnt_id].second;
+        cnt_id++;
+    }
+    for (int i = 0; i < nsub(); i++) {
+        sub()[i]->return_counters(cnts, cnt_id);
+    }
+}
 
 // Constructor.  Allocates vectors as appropriate for operator.
 Regexp::Regexp(RegexpOp op, ParseFlags parse_flags)
