@@ -11,21 +11,10 @@ int main(int argc, char **argv) {
     }
     std::ifstream input(argv[2]);
 
-    // stuff to get rid of ^ and $
-    /*
-    string pattern;
-    if (argv[1][0] == '^') {
-        pattern = string("(?:") +  string((char *)&(argv[1][1]));
-    } else {
-        pattern = string("\\C*(?:") + string(argv[1]);
+    if (!input.is_open()) {
+        std::cerr << "Failed to open file " << argv[2] << '\n';
+        return EXIT_FAILURE;
     }
-    if (pattern.back() == '$') {
-        pattern.pop_back();
-        pattern = pattern + string(")");
-    } else {
-        pattern = pattern + string(")\\C*");
-    }
-    */
 
     CSA::Matcher matcher(argv[1]);
     std::string line;
