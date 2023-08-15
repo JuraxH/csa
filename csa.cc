@@ -261,6 +261,9 @@ void GuardedTransBuilder::add_cnt_state(CA::CA<uint8_t> const& ca,
                 guarded_lvals_[can_incr].push_back(
                         make_pair(LValue(target, LValueEnum::Plus), index));
             }
+            if (!cnt_state.postponed().empty()) {
+                FATAL_ERROR("double increment", Errors::DoubleIncr);
+            }
             assert(cnt_state.postponed().empty());
         } else if (ca_trans.grd() == CA::Guard::CanExit) {
             if (can_exit == -1) {
