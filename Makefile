@@ -10,8 +10,7 @@ CSA_OBJ = build/csa.o
 
 
 
-CXXFLAGS=-std=c++20 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g -O3
-#-O3 -DNDEBUG
+CXXFLAGS=-std=c++20 -Wextra -Wall -Wfloat-equal -Wctor-dtor-privacy -Weffc++ -Woverloaded-virtual -fdiagnostics-show-option -g -O3 -DNDEBUG
 
 CXX=g++
 
