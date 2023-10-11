@@ -8,7 +8,7 @@
 #include <sstream>
 #include <iostream>
 
-#include "re2/regexp.h"
+#include "regexp.h"
 
 // the algorithm is stolen from re2/compile.cc , it is sligtly
 // modified to be used to construct CA

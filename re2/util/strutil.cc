@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "util/strutil.h"
+#include "strutil.h"
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf

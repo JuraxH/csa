@@ -1,6 +1,6 @@
 #include "csa.hh"
-#include "re2/ca.hh"
-#include "re2/glushkov.hh"
+#include "ca.hh"
+#include "glushkov.hh"
 
 #include <array>
 #include <cstddef>

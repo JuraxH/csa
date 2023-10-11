@@ -1,4 +1,4 @@
-#include "re2/glushkov.hh"
+#include "glushkov.hh"
 #include "ca.hh"
 #include "glushkov.hh"
 #include "csa_errors.hh"

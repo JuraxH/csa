@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <string>
 
-#include "re2/ca.hh"
-#include "util/ord_vector.hh"
+#include "ca.hh"
+#include "ord_vector.hh"
 #include "csa_errors.hh"
 
 

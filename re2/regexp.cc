@@ -5,7 +5,7 @@
 // Regular expression representation.
 // Tested by parse_test.cc
 
-#include "re2/regexp.h"
+#include "regexp.h"
 
 #include <cassert>
 #include <stddef.h>
@@ -16,11 +16,11 @@
 #include <string>
 #include <vector>
 
-#include "util/util.h"
-#include "util/logging.h"
-#include "util/mutex.h"
-#include "util/utf.h"
-#include "re2/pod_array.h"
+#include "util.h"
+#include "logging.h"
+#include "mutex.h"
+#include "utf.h"
+#include "pod_array.h"
 
 namespace re2 {
 

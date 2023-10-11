@@ -8,9 +8,9 @@
 #include <unordered_map>
 
 #include "ca.hh"
-#include "re2/regex.hh"
-#include "re2/ca.hh"
-#include "re2/range_builder.hh"
+#include "regex.hh"
+#include "ca.hh"
+#include "range_builder.hh"
 
 
 

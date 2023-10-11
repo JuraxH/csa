@@ -215,7 +215,7 @@
 #include <TargetConditionals.h>
 #endif
 
-#include "re2/stringpiece.h"
+#include "stringpiece.h"
 
 namespace re2 {
 class Prog;

@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "re2/stringpiece.h"
-#include "util/util.h"
+#include "stringpiece.h"
+#include "util.h"
 
 namespace re2 {
 std::string StringPrintf(const char* format, ...);

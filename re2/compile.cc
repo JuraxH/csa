@@ -13,13 +13,13 @@
 #include <unordered_map>
 #include <utility>
 
-#include "util/logging.h"
-#include "util/utf.h"
-#include "re2/pod_array.h"
-#include "re2/prog.h"
-#include "re2/re2.h"
-#include "re2/regexp.h"
-#include "re2/walker-inl.h"
+#include "logging.h"
+#include "utf.h"
+#include "pod_array.h"
+#include "prog.h"
+#include "re2.h"
+#include "regexp.h"
+#include "walker-inl.h"
 
 namespace re2 {
 

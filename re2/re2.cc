@@ -7,7 +7,7 @@
 // Originally the PCRE C++ wrapper, but adapted to use
 // the new automata-based regular expression engines.
 
-#include "re2/re2.h"
+#include "re2.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -16,10 +16,10 @@
 #include <string>
 #include <vector>
 
-#include "util/logging.h"
-#include "re2/prog.h"
-#include "re2/regexp.h"
-#include "re2/sparse_array.h"
+#include "logging.h"
+#include "prog.h"
+#include "regexp.h"
+#include "sparse_array.h"
 
 namespace re2 {
 

@@ -23,15 +23,15 @@
 #include <string>
 #include <vector>
 
-#include "util/util.h"
-#include "util/logging.h"
-#include "util/utf.h"
-#include "re2/pod_array.h"
-#include "re2/regexp.h"
-#include "re2/stringpiece.h"
-#include "re2/unicode_casefold.h"
-#include "re2/unicode_groups.h"
-#include "re2/walker-inl.h"
+#include "util.h"
+#include "logging.h"
+#include "utf.h"
+#include "pod_array.h"
+#include "regexp.h"
+#include "stringpiece.h"
+#include "unicode_casefold.h"
+#include "unicode_groups.h"
+#include "walker-inl.h"
 
 #if defined(RE2_USE_ICU)
 #include "unicode/uniset.h"

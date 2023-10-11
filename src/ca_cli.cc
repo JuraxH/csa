@@ -1,7 +1,7 @@
 #include "argparse.hpp"
 
 #include "csa.hh"
-#include "re2/glushkov.hh"
+#include "glushkov.hh"
 
 #include <iostream>
 #include <stdexcept>

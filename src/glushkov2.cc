@@ -1,4 +1,4 @@
-#include "re2/glushkov2.hh"
+#include "glushkov2.hh"
 
 #include <algorithm>
 #include <cstdint>

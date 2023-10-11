@@ -93,10 +93,10 @@
 #include <string>
 #include <vector>
 
-#include "util/util.h"
-#include "util/logging.h"
-#include "util/utf.h"
-#include "re2/stringpiece.h"
+#include "util.h"
+#include "logging.h"
+#include "utf.h"
+#include "stringpiece.h"
 
 namespace re2 {
 

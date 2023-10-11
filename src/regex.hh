@@ -5,9 +5,9 @@
 #include <string_view>
 #include <memory>
 
-#include "re2/re2.h"
-#include "re2/regexp.h"
-#include "re2/prog.h"
+#include "re2.h"
+#include "regexp.h"
+#include "prog.h"
 #include "csa_errors.hh"
 
 
