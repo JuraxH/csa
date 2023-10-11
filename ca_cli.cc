@@ -50,26 +50,21 @@ int main (int argc, char *argv[]) {
 
     argparse::ArgumentParser lines_command("lines");
     lines_command.add_description("Outputs the number of lines matching pattern");
-
-    argparse::ArgumentParser debug_command("debug");
-    debug_command.add_description("Prints the automaton in DOT format.");
-
-    debug_command.add_argument("automaton")
-        .help("ca or csa");
-
-    debug_command.add_argument("pattern")
-        .help("using the RE2 syntax");
-
-    debug_command.add_argument("--check")
-        .help("do not print graph")
-        .default_value(false)
-        .implicit_value(true);
-
-
     lines_command.add_argument("pattern")
         .help("regex using the RE2 syntax");
     lines_command.add_argument("file")
         .help("the file to be read");
+
+    argparse::ArgumentParser debug_command("debug");
+    debug_command.add_description("Prints the automaton in DOT format.");
+    debug_command.add_argument("automaton")
+        .help("ca or csa");
+    debug_command.add_argument("pattern")
+        .help("using the RE2 syntax");
+    debug_command.add_argument("--check")
+        .help("do not print graph")
+        .default_value(false)
+        .implicit_value(true);
 
     program.add_subparser(lines_command);
     program.add_subparser(debug_command);
@@ -91,20 +86,18 @@ int main (int argc, char *argv[]) {
     if (program.is_subcommand_used(lines_command)) {
         auto pattern = lines_command.get<std::string>("pattern");
         auto file_name = lines_command.get<std::string>("file");
-        std::cerr << "lines: " << pattern << " " << file_name << std::endl;
         count_lines(pattern, std::move(file_name));
     } else if (program.is_subcommand_used(debug_command)) {
         auto pattern = debug_command.get<std::string>("pattern");
         auto automaton = debug_command.get<std::string>("automaton");
         bool print = debug_command["--check"] == false;
         if (automaton == "ca") {
-            std::cerr << "printing the DOT graph of ca: " << pattern << std::endl;
             debug_ca(pattern, print);
         } else if (automaton == "csa") {
-            std::cerr << "printing the DOT graph of csa: " << pattern << std::endl;
             debug_csa(pattern, print);
         } else {
             std::cerr << "automaton must be either ca or csa\n";
+            std::exit(1);
         }
     } else {
         std::cerr << program;
