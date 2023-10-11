@@ -42,7 +42,7 @@ the pattern.
 Counting the number of lines in `README.md` with `cmake` on them.
 ```
 $ ./buid/ca_cli lines 'cmake' README.md
-3
+7
 ```
 
 ## References
