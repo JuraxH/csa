@@ -23,17 +23,17 @@ for benchmarks which prints the amount of lines in file containing
 the pattern.
 
 ### Example
-Counting the number lines with `cmake` on them.
+Counting the number of lines in `README.md` with `cmake` on them.
 ```
 $ ./buid/ca_cli lines 'cmake' README.md
 3
 ```
 
 ## References
-<a id="1">[1]<\a>
+<a id="1">[1]</a>
 Lukas Holik and Lenka Holikova and Juraj Sic and Tomas Vojnar [(2023)](https://www.fit.vut.cz/research/publication/12931/).
 Fast Matching of Regular Patterns with Synchronizing Counting (Technical Report).
 
-<a id="2">[2]<\a>
+<a id="2">[2]</a>
 [RE2](https://github.com/google/re2): A Regular Expressions library developed by Google.
 
