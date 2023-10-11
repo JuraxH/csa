@@ -23,7 +23,7 @@ Now there should be executable `ca_cli` in the build directory.
 
 ### Using nix
 To perform this build nix must be installed and experimental features
-[nix command and flakes](https://nixos.wiki/wiki/Flakes).
+[nix command and flakes](https://nixos.wiki/wiki/Flakes) must be enabled.
 
 To build just run the `nix build` command.
 ```
