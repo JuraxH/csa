@@ -30,14 +30,18 @@ void count_lines(std::string_view pattern, std::string file) {
     std::cout << matches << std::endl;
 }
 
-void print_ca_DOT(std::string_view pattern) {
+void debug_ca(std::string_view pattern, bool print_graph) {
     auto ca = CA::glushkov::Builder::get_ca(pattern);
-    std::cout << ca.to_DOT([] (uint8_t arg) { return std::to_string(arg); }) << std::endl;
+    if (print_graph) {
+        std::cout << ca.to_DOT([] (uint8_t arg) { return std::to_string(arg); }) << std::endl;
+    }
 }
 
-void print_csa_DOT(std::string_view pattern) {
+void debug_csa(std::string_view pattern, bool print_graph) {
     CSA::Visualizer vis(pattern);
-    std::cout << vis.to_DOT_CSA() << std::endl;
+    if (print_graph) {
+        std::cout << vis.to_DOT_CSA() << std::endl;
+    }
 }
 
 int main (int argc, char *argv[]) {
@@ -55,6 +59,11 @@ int main (int argc, char *argv[]) {
 
     debug_command.add_argument("pattern")
         .help("using the RE2 syntax");
+
+    debug_command.add_argument("--check")
+        .help("do not print graph")
+        .default_value(false)
+        .implicit_value(true);
 
 
     lines_command.add_argument("pattern")
@@ -87,12 +96,13 @@ int main (int argc, char *argv[]) {
     } else if (program.is_subcommand_used(debug_command)) {
         auto pattern = debug_command.get<std::string>("pattern");
         auto automaton = debug_command.get<std::string>("automaton");
+        bool print = debug_command["--check"] == false;
         if (automaton == "ca") {
             std::cerr << "printing the DOT graph of ca: " << pattern << std::endl;
-            print_ca_DOT(pattern);
+            debug_ca(pattern, print);
         } else if (automaton == "csa") {
             std::cerr << "printing the DOT graph of csa: " << pattern << std::endl;
-            print_csa_DOT(pattern);
+            debug_csa(pattern, print);
         } else {
             std::cerr << "automaton must be either ca or csa\n";
         }
