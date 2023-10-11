@@ -37,6 +37,9 @@ build/%.o: %.cc
 build/main: build/main.o $(CSA_OBJ) $(RE2_OBJ) $(UTIL_OBJ)
 	$(CXX) $(LDFLAGS) $^ $(LIBS) -o $@
 
+build/ca_cli: build/ca_cli.o $(CSA_OBJ) $(RE2_OBJ) $(UTIL_OBJ)
+	$(CXX) $(LDFLAGS) $^ $(LIBS) -o $@
+
 build/csa_bench: build/csa_bench.o $(CSA_OBJ) $(RE2_OBJ) $(UTIL_OBJ)
 	$(CXX) -static $(LDFLAGS) $^ $(LIBS) -o $@
 

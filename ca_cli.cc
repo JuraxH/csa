@@ -1,6 +1,44 @@
 #include "argparse.hpp"
+
+#include "csa.hh"
+#include "re2/glushkov.hh"
+
 #include <iostream>
 #include <stdexcept>
+#include <string_view>
+#include <fstream>
+
+using namespace std::string_literals;
+
+void count_lines(std::string_view pattern, std::string file) {
+    std::ifstream input(file);
+
+    if (!input.is_open()) {
+        std::cerr << "Failed to open file " << file << '\n';
+        std::exit(1);
+    }
+
+    CSA::Matcher matcher(pattern);
+    std::string line;
+    unsigned matches = 0;
+    while (getline(input, line)) {
+        if (matcher.match(line)) {
+            ++matches;
+        }
+    }
+
+    std::cout << matches << std::endl;
+}
+
+void print_ca_DOT(std::string_view pattern) {
+    auto ca = CA::glushkov::Builder::get_ca(pattern);
+    std::cout << ca.to_DOT([] (uint8_t arg) { return std::to_string(arg); }) << std::endl;
+}
+
+void print_csa_DOT(std::string_view pattern) {
+    CSA::Visualizer vis(pattern);
+    std::cout << vis.to_DOT_CSA() << std::endl;
+}
 
 int main (int argc, char *argv[]) {
     argparse::ArgumentParser program("ca_cli");
@@ -44,17 +82,17 @@ int main (int argc, char *argv[]) {
     if (program.is_subcommand_used(lines_command)) {
         auto pattern = lines_command.get<std::string>("pattern");
         auto file_name = lines_command.get<std::string>("file");
-        // TODO: match_lines(pattern, file);
         std::cerr << "lines: " << pattern << " " << file_name << std::endl;
+        count_lines(pattern, std::move(file_name));
     } else if (program.is_subcommand_used(debug_command)) {
         auto pattern = debug_command.get<std::string>("pattern");
         auto automaton = debug_command.get<std::string>("automaton");
         if (automaton == "ca") {
-            // TODO: print_ca(pattern)
             std::cerr << "printing the DOT graph of ca: " << pattern << std::endl;
+            print_ca_DOT(pattern);
         } else if (automaton == "csa") {
-            // TODO: print_csa(pattern)
             std::cerr << "printing the DOT graph of csa: " << pattern << std::endl;
+            print_csa_DOT(pattern);
         } else {
             std::cerr << "automaton must be either ca or csa\n";
         }
