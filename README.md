@@ -7,7 +7,12 @@ Main purpose of this implementation was benchmarking so only basic
 usage is supported.
 
 ## Building
-To build the program `cmake` and compiler supporting c++20 is required.
+Two builds are possible, directly using `cmake` or using `nix build`.
+The advantage of the nix build is that it does not require having c++20
+supporting compiler.
+
+### Using cmake
+The program `cmake` and compiler supporting c++20 is required.
 
 To run the build execute the 2 following commands:
 ```
@@ -15,6 +20,17 @@ cmake -B build -S .
 cmake --build build
 ```
 Now there should be executable `ca_cli` in the build directory.
+
+### Using nix
+To perform this build nix must be installed and experimental features
+[nix command and flakes](https://nixos.wiki/wiki/Flakes).
+
+To build just run the `nix build` command.
+```
+$ nix build
+$ ls result/bin
+ca_cli
+```
 
 ## Usage
 The program `ca_cli` has 2 sub commands `debug` which can be used to
