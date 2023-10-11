@@ -1137,14 +1137,11 @@ void CSA::compute_full() {
 }
 
 Visualizer::Visualizer(std::string_view pattern)
-    : pattern_(pattern), csa_(CA::glushkov::Builder::get_ca(pattern)) { }
+    : pattern_(pattern), csa_(CA::glushkov::Builder::get_ca(pattern)) { 
+    csa_.compute_full();
+}
 
 std::string Visualizer::to_DOT_CSA() {
-    static bool computed = false;
-    if (!computed) {
-        csa_.compute_full();
-    }
-    computed = true;
     return csa_.to_DOT();
 }
 
