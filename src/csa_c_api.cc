@@ -3,6 +3,30 @@
 #include <iostream>
 
 extern "C" {
+    void* csa_compile(const char* pattern) {
+        try {
+            return new CSA::Matcher(pattern);
+        } catch (...) {
+            return nullptr;
+        }
+    }
+
+    void csa_free(void* ptr) {
+        if (ptr) {
+            delete static_cast<CSA::Matcher*>(ptr);
+        }
+    }
+
+    int csa_match_compiled(void* ptr, const char* text) {
+        if (!ptr) return -1;
+        try {
+            CSA::Matcher* matcher = static_cast<CSA::Matcher*>(ptr);
+            return matcher->match(text) ? 1 : 0;
+        } catch (...) {
+            return -1;
+        }
+    }
+
     int csa_match(const char* pattern, const char* text) {
         try {
             CSA::Matcher matcher(pattern);
