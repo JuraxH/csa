@@ -71,4 +71,58 @@ set_target_properties(ca_cli
 
 target_include_directories(ca_cli PRIVATE re2 util src re2/util)
 
+# Build a shared library for testing with Python ctypes
+add_library(csa_test SHARED
+    src/csa_c_api.cc
+    src/ca.hh
+    src/csa.cc
+    src/csa_errors.hh
+    src/csa.hh
+    src/glushkov.cc
+    src/glushkov.hh
+    src/regex.hh
+
+    re2/bitmap256.h
+    re2/compile.cc
+    re2/parse.cc
+    re2/perl_groups.cc
+    re2/pod_array.h
+    re2/prog.cc
+    re2/prog.h
+    re2/range_builder.hh
+    re2/re2.cc
+    re2/re2.h
+    re2/regexp.cc
+    re2/regexp.h
+    re2/simplify.cc
+    re2/sparse_array.h
+    re2/sparse_set.h
+    re2/stringpiece.cc
+    re2/stringpiece.h
+    re2/tostring.cc
+    re2/unicode_casefold.cc
+    re2/unicode_casefold.h
+    re2/unicode_groups.cc
+    re2/unicode_groups.h
+    re2/walker-inl.h
+
+    re2/util/logging.h
+    re2/util/mutex.h
+    re2/util/rune.cc
+    re2/util/strutil.cc
+    re2/util/strutil.h
+    re2/util/utf.h
+    re2/util/util.h
+
+    util/ord_vector.hh
+)
+
+set_target_properties(csa_test
+  PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+    POSITION_INDEPENDENT_CODE ON
+  )
+
+target_include_directories(csa_test PRIVATE re2 util src re2/util)
 
