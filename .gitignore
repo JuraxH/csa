@@ -33,3 +33,4 @@
 # build directory
 build
 tests/__pycache__
+rust_benchmark/target/
