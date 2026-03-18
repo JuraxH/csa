@@ -32,3 +32,4 @@
 *.app
 # build directory
 build
+tests/__pycache__
